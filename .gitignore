@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.pkl
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# PyCharm
+.idea/
+
+# Environment variables
+.env
+
+# ML generated files
+data/hospitals_zoned.json
+ml/zone_model.pkl
+
+# OS
+.DS_Store
+Thumbs.db

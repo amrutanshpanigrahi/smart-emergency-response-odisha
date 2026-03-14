@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IERN – Zone Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0f1923;color:#e8e8e8;height:100vh;display:flex;flex-direction:column}
+#header{background:#161f2e;padding:14px 20px;display:flex;align-items:center;gap:16px;border-bottom:1px solid #243044}
+#header h1{font-size:17px;font-weight:700;color:#fff;flex:1}
+.live-badge{background:#1D9E75;color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+#map{flex:1}
+#sidebar{position:absolute;top:60px;right:16px;width:300px;z-index:1000;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 80px);overflow-y:auto}
+.panel{background:rgba(22,31,46,0.95);border:1px solid #243044;border-radius:14px;padding:14px 16px;backdrop-filter:blur(8px)}
+.panel-title{font-size:12px;font-weight:600;color:#7a8ca8;margin-bottom:10px;letter-spacing:0.06em;text-transform:uppercase}
+.zone-row{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;border-radius:8px;padding:6px 8px}
+.zone-row:hover{background:rgba(255,255,255,0.05)}
+.zone-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.zone-label{font-size:13px;font-weight:500;flex:1}
+.zone-desc{font-size:11px;color:#7a8ca8}
+.zone-count{font-size:12px;color:#7a8ca8;background:#243044;padding:2px 8px;border-radius:10px;flex-shrink:0}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-card{background:#1a2436;border-radius:10px;padding:10px 12px}
+.stat-val{font-size:20px;font-weight:700;color:#fff}
+.stat-key{font-size:11px;color:#7a8ca8}
+.rec-card{background:#1a2436;border-radius:10px;padding:10px 12px;margin-bottom:6px;border-left:3px solid;cursor:pointer}
+.rec-card:hover{opacity:0.85}
+.rec-name{font-size:13px;font-weight:600;color:#fff}
+.rec-meta{font-size:11px;color:#7a8ca8;margin-top:2px}
+.rec-reason{font-size:11px;color:#5DCAA5;margin-top:4px}
+select{background:#1a2436;border:1px solid #243044;border-radius:8px;color:#fff;padding:7px 10px;font-size:12px;width:100%;margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>IERN · Odisha Hospital Zone Map</h1>
+  <span class="live-badge">ML Zones Active</span>
+</div>
+
+<div id="map"></div>
+
+<div id="sidebar">
+
+  <!-- Zone legend -->
+  <div class="panel">
+    <div class="panel-title">Zone classification</div>
+    <div id="zone-legend"></div>
+  </div>
+
+  <!-- Overview stats -->
+  <div class="panel">
+    <div class="panel-title">Overview</div>
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-val" id="stat-total">40</div>
+        <div class="stat-key">Hospitals</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-er">--</div>
+        <div class="stat-key">ER available</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-beds">--</div>
+        <div class="stat-key">Total beds</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" id="stat-avg">--</div>
+        <div class="stat-key">Avg rating</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Recommender -->
+  <div class="panel">
+    <div class="panel-title">AI Recommendations</div>
+    <select id="ai-symptom" onchange="runAIRecommend()">
+      <option value="chest pain">Chest pain / cardiac</option>
+      <option value="accident">Accident / trauma</option>
+      <option value="stroke">Stroke</option>
+      <option value="fracture">Fracture / ortho</option>
+      <option value="breathing">Breathing difficulty</option>
+      <option value="general">General emergency</option>
+    </select>
+    <select id="ai-sev" onchange="runAIRecommend()">
+      <option value="high">High severity</option>
+      <option value="medium">Medium severity</option>
+      <option value="low">Low severity</option>
+    </select>
+    <div id="ai-results">
+      <div style="color:#7a8ca8;font-size:12px">Loading recommendations...</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const ZONE_META = {
+  0: {name:"Zone A – Critical Care Hub", color:"#E24B4A", desc:"Top-rated, high-capacity"},
+  1: {name:"Zone B – Regional Centre",   color:"#EF9F27", desc:"Good regional hospitals"},
+  2: {name:"Zone C – District Hospital", color:"#378ADD", desc:"Moderate district hospitals"},
+  3: {name:"Zone D – Basic Facility",    color:"#888780", desc:"Rural/basic facilities"},
+};
+
+let map, allHospitals = [], markers = [];
+let activeZone = null;
+const userLat  = 20.2961;
+const userLng  = 85.8245;
+
+// Init map centered on Odisha
+map = L.map("map").setView([20.5, 84.5], 7);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {attribution:"© OpenStreetMap contributors"}).addTo(map);
+
+// Load hospitals from API
+fetch("/api/zones")
+  .then(r => r.json())
+  .then(data => {
+    allHospitals = data.hospitals;
+    buildMap();
+    buildLegend();
+    buildStats();
+    runAIRecommend();
+  })
+  .catch(err => {
+    console.error("Could not load zones:", err);
+    document.getElementById("zone-legend").innerHTML =
+      '<div style="color:#E24B4A;font-size:12px">Could not load hospitals. Is the server running?</div>';
+  });
+
+// Plot all hospitals on map
+function buildMap() {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+
+  allHospitals.forEach(h => {
+    const meta   = ZONE_META[h.zone_id] || ZONE_META[3];
+    const radius = 6 + (h.rating - 3) * 2;
+
+    const m = L.circleMarker([h.lat, h.lng], {
+      radius:      radius,
+      color:       meta.color,
+      fillColor:   meta.color,
+      fillOpacity: 0.85,
+      weight:      1.5
+    }).addTo(map);
+
+    m.bindPopup(`
+      <div style="font-weight:700;font-size:14px;margin-bottom:4px">${h.name}</div>
+      <div style="background:${meta.color};color:#fff;font-size:11px;padding:2px 8px;
+        border-radius:10px;display:inline-block;margin-bottom:6px">${meta.name}</div>
+      <div style="font-size:12px;color:#555;margin-bottom:2px">★ ${h.rating} · ${h.type}</div>
+      <div style="font-size:12px;color:#555;margin-bottom:2px">${h.beds} beds · ${h.er_available ? "ER Open ✓" : "No ER"}</div>
+      <div style="font-size:12px;color:#555;margin-bottom:2px">${h.specialty}</div>
+      <div style="font-size:12px;color:#555;margin-bottom:2px">${h.city}, ${h.district}</div>
+      <div style="font-size:12px;color:#555">${h.phone}</div>
+    `);
+
+    m.zoneId = h.zone_id;
+    markers.push(m);
+  });
+}
+
+// Build zone filter legend
+function buildLegend() {
+  const counts = {};
+  allHospitals.forEach(h => {
+    counts[h.zone_id] = (counts[h.zone_id] || 0) + 1;
+  });
+
+  document.getElementById("zone-legend").innerHTML =
+    Object.entries(ZONE_META).map(([zid, z]) => `
+      <div class="zone-row" onclick="filterByZone(${zid})">
+        <div class="zone-dot" style="background:${z.color}"></div>
+        <div style="flex:1">
+          <div class="zone-label">${z.name}</div>
+          <div class="zone-desc">${z.desc}</div>
+        </div>
+        <div class="zone-count">${counts[zid] || 0}</div>
+      </div>`).join("");
+}
+
+// Build overview stats
+function buildStats() {
+  document.getElementById("stat-total").textContent =
+    allHospitals.length;
+  document.getElementById("stat-er").textContent =
+    allHospitals.filter(h => h.er_available).length;
+  document.getElementById("stat-beds").textContent =
+    allHospitals.reduce((s, h) => s + h.beds, 0).toLocaleString();
+  document.getElementById("stat-avg").textContent =
+    (allHospitals.reduce((s, h) => s + h.rating, 0) / allHospitals.length).toFixed(1) + "★";
+}
+
+// Filter map by zone
+function filterByZone(zid) {
+  activeZone = activeZone === zid ? null : zid;
+  markers.forEach(m => {
+    if (activeZone === null || m.zoneId === activeZone) {
+      m.setStyle({opacity: 1, fillOpacity: 0.85});
+    } else {
+      m.setStyle({opacity: 0.1, fillOpacity: 0.05});
+    }
+  });
+}
+
+// AI recommendations
+function runAIRecommend() {
+  const symptom  = document.getElementById("ai-symptom").value;
+  const severity = document.getElementById("ai-sev").value;
+  const res      = document.getElementById("ai-results");
+  res.innerHTML  = '<div style="color:#7a8ca8;font-size:12px">Ranking hospitals...</div>';
+
+  fetch("/api/recommend", {
+    method:  "POST",
+    headers: {"Content-Type": "application/json"},
+    body:    JSON.stringify({lat: userLat, lng: userLng, symptom, severity})
+  })
+  .then(r => r.json())
+  .then(data => renderAIResults(data.recommendations))
+  .catch(() => {
+    res.innerHTML = '<div style="color:#E24B4A;font-size:12px">Could not load recommendations.</div>';
+  });
+}
+
+function renderAIResults(recs) {
+  const res = document.getElementById("ai-results");
+  res.innerHTML = recs.slice(0, 4).map((h, i) => {
+    const meta = ZONE_META[h.zone_id] || ZONE_META[3];
+    return `
+      <div class="rec-card" style="border-color:${meta.color}"
+           onclick="map.setView([${h.lat}, ${h.lng}], 13)">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:11px;font-weight:700;color:${meta.color}">#${i+1}</span>
+          <div class="rec-name">${h.name}</div>
+        </div>
+        <div class="rec-meta">${h.city} · ${h.distance_km} km · ★${h.rating}</div>
+        <div class="rec-reason">${h.ai_reason}</div>
+      </div>`;
+  }).join("");
+}
+</script>
+</body>
+</html>

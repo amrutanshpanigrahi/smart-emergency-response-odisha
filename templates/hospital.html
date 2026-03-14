@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IERN – Hospital Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#f4f6fb;color:#222;min-height:100vh}
+#topbar{background:#0f3460;padding:14px 24px;display:flex;align-items:center;gap:16px}
+#topbar h1{font-size:16px;font-weight:700;color:#fff;flex:1}
+.hosp-chip{background:rgba(255,255,255,0.15);color:#fff;padding:5px 14px;border-radius:20px;font-size:12px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#1D9E75;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(29,158,117,.4)}50%{box-shadow:0 0 0 6px rgba(29,158,117,0)}}
+.grid{display:grid;grid-template-columns:1fr 1fr;height:calc(100vh - 54px)}
+.col{overflow-y:auto;padding:16px}
+.col-left{border-right:1px solid #e8eaf0}
+.section{background:#fff;border-radius:14px;padding:16px 18px;margin-bottom:14px;border:1px solid #eee}
+.sec-title{font-size:11px;font-weight:700;color:#888;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:12px}
+.alert-banner{background:linear-gradient(90deg,#2d0a0a,#1a0e0e);border:1px solid #E24B4A44;border-radius:14px;padding:16px 18px;margin-bottom:14px}
+.alert-top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.alert-icon{width:36px;height:36px;border-radius:50%;background:#E24B4A22;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.alert-title{font-size:15px;font-weight:700;color:#fff}
+.alert-sub{font-size:12px;color:#E24B4A}
+.alert-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.alert-card{background:#1a0e0e;border-radius:8px;padding:8px 10px}
+.alert-val{font-size:15px;font-weight:700;margin-bottom:2px}
+.alert-key{font-size:11px;color:#7a4444}
+.ack-btn{width:100%;padding:11px;border-radius:10px;background:#1D9E75;color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer}
+.prep-item{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid #f0f2f7}
+.prep-item:last-child{border-bottom:none}
+.prep-check{width:22px;height:22px;border-radius:6px;border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;background:#fff;transition:all .15s}
+.prep-check.done{background:#1D9E75;border-color:#1D9E75}
+.prep-label{flex:1;font-size:13px}
+.prep-label.done{text-decoration:line-through;color:#aaa}
+.prep-badge{font-size:10px;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.badge-red{background:#FCEBEB;color:#A32D2D}
+.badge-amber{background:#FAEEDA;color:#854F0B}
+.badge-green{background:#E1F5EE;color:#085041}
+.tl{padding-left:16px;border-left:2px solid #eee}
+.tl-item{position:relative;padding:0 0 14px 18px}
+.tl-item:last-child{padding-bottom:0}
+.tl-dot{position:absolute;left:-7px;top:3px;width:12px;height:12px;border-radius:50%}
+.tl-done{background:#1D9E75}
+.tl-active{background:#378ADD;box-shadow:0 0 0 4px rgba(55,138,221,0.2)}
+.tl-pending{background:#e0e0e0}
+.tl-label{font-size:13px;font-weight:500}
+.tl-time{font-size:11px;color:#888;margin-top:1px}
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.stat-card{background:#f4f6fb;border-radius:10px;padding:10px 12px;text-align:center}
+.stat-val{font-size:18px;font-weight:700;color:#0f3460}
+.stat-key{font-size:10px;color:#888;margin-top:2px}
+.zone-table{width:100%;border-collapse:collapse;font-size:13px}
+.zone-table th{text-align:left;font-size:11px;color:#888;font-weight:600;padding:6px 8px;border-bottom:2px solid #eee}
+.zone-table td{padding:8px;border-bottom:1px solid #f0f2f7}
+.zone-dot-sm{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+#map-small{height:220px;border-radius:12px;overflow:hidden;margin-bottom:14px}
+.sound-wave{display:flex;gap:3px;align-items:center;height:20px}
+.wave-bar{width:3px;border-radius:2px;background:#E24B4A;animation:wave .8s ease-in-out infinite}
+.wave-bar:nth-child(2){animation-delay:.1s;height:10px}
+.wave-bar:nth-child(3){animation-delay:.2s;height:16px}
+.wave-bar:nth-child(4){animation-delay:.3s;height:8px}
+.wave-bar:nth-child(5){animation-delay:.4s;height:14px}
+@keyframes wave{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(1.2)}}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="live-dot"></div>
+  <h1>IERN Hospital Dashboard</h1>
+  <span class="hosp-chip">Apollo Hospitals · ER Wing B</span>
+</div>
+
+<div class="grid">
+
+  <!-- LEFT COLUMN -->
+  <div class="col col-left">
+
+    <div class="alert-banner" id="alert-banner">
+      <div class="alert-top">
+        <div class="alert-icon">
+          <div class="sound-wave">
+            <div class="wave-bar" style="height:6px"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+            <div class="wave-bar"></div>
+          </div>
+        </div>
+        <div>
+          <div class="alert-title">Incoming patient</div>
+          <div class="alert-sub" id="alert-eta-line">Ambulance arriving in 14 min</div>
+        </div>
+        <span id="alert-priority" style="background:#E24B4A;color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;margin-left:auto">HIGH</span>
+      </div>
+
+      <div class="alert-grid">
+        <div class="alert-card">
+          <div class="alert-val" style="color:#fff" id="al-name">Arjun Roy</div>
+          <div class="alert-key">Patient name</div>
+        </div>
+        <div class="alert-card">
+          <div class="alert-val" style="color:#E24B4A" id="al-symptom">Chest pain</div>
+          <div class="alert-key">Symptom</div>
+        </div>
+        <div class="alert-card">
+          <div class="alert-val" style="color:#EF9F27" id="al-blood">O+</div>
+          <div class="alert-key">Blood group</div>
+        </div>
+        <div class="alert-card">
+          <div class="alert-val" style="color:#5DCAA5" id="al-zone">Zone B</div>
+          <div class="alert-key">Dispatched from zone</div>
+        </div>
+      </div>
+
+      <div style="background:#1a0e0e;border-radius:8px;padding:10px 12px;margin-bottom:12px">
+        <div style="font-size:11px;color:#E24B4A;font-weight:600;margin-bottom:4px">AI RECOMMENDATION NOTE</div>
+        <div style="font-size:12px;color:#cc9999;line-height:1.6" id="al-ai-note">
+          Patient selected this hospital based on specialty match and proximity. Cardiac team pre-briefing recommended.
+        </div>
+      </div>
+
+      <button class="ack-btn" onclick="acknowledgeAlert()">Acknowledge &amp; start prep</button>
+    </div>
+
+    <!-- Prep checklist -->
+    <div class="section">
+      <div class="sec-title">Prep checklist</div>
+      <div id="prep-list">
+        <div class="prep-item" id="prep-0">
+          <div class="prep-check done" onclick="togglePrep(0)">
+            <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <span class="prep-label done">ECG machine · Bay 3 reserved</span>
+          <span class="prep-badge badge-green">Done</span>
+        </div>
+        <div class="prep-item" id="prep-1">
+          <div class="prep-check done" onclick="togglePrep(1)">
+            <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <span class="prep-label done">Cardiac team alerted (Dr. Mehta)</span>
+          <span class="prep-badge badge-green">Done</span>
+        </div>
+        <div class="prep-item" id="prep-2">
+          <div class="prep-check" onclick="togglePrep(2)"></div>
+          <span class="prep-label">Stretcher ready · Corridor B</span>
+          <span class="prep-badge badge-amber">Pending</span>
+        </div>
+        <div class="prep-item" id="prep-3">
+          <div class="prep-check" onclick="togglePrep(3)"></div>
+          <span class="prep-label">O+ blood units reserved (2 units)</span>
+          <span class="prep-badge badge-amber">Pending</span>
+        </div>
+        <div class="prep-item" id="prep-4">
+          <div class="prep-check" onclick="togglePrep(4)"></div>
+          <span class="prep-label">ER Bay 3 cleared and sanitised</span>
+          <span class="prep-badge badge-red">Not started</span>
+        </div>
+        <div class="prep-item" id="prep-5">
+          <div class="prep-check" onclick="togglePrep(5)"></div>
+          <span class="prep-label">Anaesthesiology on standby</span>
+          <span class="prep-badge badge-red">Not started</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live map -->
+    <div class="section">
+      <div class="sec-title">Ambulance live location</div>
+      <div id="map-small"></div>
+      <div style="display:flex;gap:12px;font-size:12px;color:#888">
+        <span><span style="width:10px;height:10px;border-radius:50%;background:#EF9F27;display:inline-block;margin-right:4px"></span>Ambulance</span>
+        <span><span style="width:10px;height:10px;border-radius:50%;background:#E24B4A;display:inline-block;margin-right:4px"></span>Patient</span>
+        <span><span style="width:10px;height:10px;border-radius:50%;background:#1D9E75;display:inline-block;margin-right:4px"></span>This hospital</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT COLUMN -->
+  <div class="col">
+
+    <!-- Timeline -->
+    <div class="section">
+      <div class="sec-title">Live incident timeline</div>
+      <div class="tl" id="timeline">
+        <div class="tl-item">
+          <div class="tl-dot tl-done"></div>
+          <div class="tl-label">Patient placed emergency call</div>
+          <div class="tl-time">14:32 · Park Street, Bhubaneswar</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot tl-done"></div>
+          <div class="tl-label">This hospital selected by patient</div>
+          <div class="tl-time">14:33 · AI zone match confirmed</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot tl-done"></div>
+          <div class="tl-label">Hospital pre-alert sent</div>
+          <div class="tl-time">14:33 · You were notified</div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot tl-active"></div>
+          <div class="tl-label">Ambulance en route to patient</div>
+          <div class="tl-time">Now · ETA <span id="eta-live">6 min</span></div>
+        </div>
+        <div class="tl-item" id="tl-5">
+          <div class="tl-dot tl-pending"></div>
+          <div class="tl-label">Ambulance en route to hospital</div>
+          <div class="tl-time">Estimated ~14:52</div>
+        </div>
+        <div class="tl-item" id="tl-6">
+          <div class="tl-dot tl-pending"></div>
+          <div class="tl-label">Patient handoff to ER team</div>
+          <div class="tl-time">Pending</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone stats -->
+    <div class="section">
+      <div class="sec-title">Zone overview · Odisha ML clusters</div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-val" id="st-a">8</div>
+          <div class="stat-key" style="color:#E24B4A">Zone A</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="st-b">14</div>
+          <div class="stat-key" style="color:#EF9F27">Zone B</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="st-c">12</div>
+          <div class="stat-key" style="color:#378ADD">Zone C</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="st-d">6</div>
+          <div class="stat-key" style="color:#888">Zone D</div>
+        </div>
+      </div>
+      <table class="zone-table">
+        <thead>
+          <tr>
+            <th>Zone</th>
+            <th>Hospitals</th>
+            <th>Avg rating</th>
+            <th>Total beds</th>
+            <th>ER open</th>
+          </tr>
+        </thead>
+        <tbody id="zone-tbody">
+          <tr>
+            <td><span class="zone-dot-sm" style="background:#E24B4A"></span>Zone A</td>
+            <td>8</td><td>4.3★</td><td>5,810</td><td>8</td>
+          </tr>
+          <tr>
+            <td><span class="zone-dot-sm" style="background:#EF9F27"></span>Zone B</td>
+            <td>14</td><td>3.9★</td><td>6,420</td><td>13</td>
+          </tr>
+          <tr>
+            <td><span class="zone-dot-sm" style="background:#378ADD"></span>Zone C</td>
+            <td>12</td><td>3.4★</td><td>2,970</td><td>11</td>
+          </tr>
+          <tr>
+            <td><span class="zone-dot-sm" style="background:#888"></span>Zone D</td>
+            <td>6</td><td>3.0★</td><td>870</td><td>3</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Recent incidents -->
+    <div class="section">
+      <div class="sec-title">Recent incidents today</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f2f7">
+          <div style="width:8px;height:8px;border-radius:50%;background:#1D9E75;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Priya Panda · Fracture</div>
+            <div style="font-size:11px;color:#888">Handoff complete · 11:45 AM</div>
+          </div>
+          <span style="font-size:11px;background:#E1F5EE;color:#085041;padding:2px 8px;border-radius:10px">Done</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f2f7">
+          <div style="width:8px;height:8px;border-radius:50%;background:#1D9E75;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Sanjay Mishra · Breathing</div>
+            <div style="font-size:11px;color:#888">Handoff complete · 09:12 AM</div>
+          </div>
+          <span style="font-size:11px;background:#E1F5EE;color:#085041;padding:2px 8px;border-radius:10px">Done</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0">
+          <div style="width:8px;height:8px;border-radius:50%;background:#EF9F27;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500">Arjun Roy · Chest pain</div>
+            <div style="font-size:11px;color:#888">En route · ETA 14 min</div>
+          </div>
+          <span style="font-size:11px;background:#FAEEDA;color:#854F0B;padding:2px 8px;border-radius:10px">Active</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const socket = io();
+socket.emit("join_hospital", {hospital_id: 4});
+
+// Init small map
+const mapSmall = L.map("map-small").setView([20.2980, 85.8250], 13);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {attribution:"© OpenStreetMap"}).addTo(mapSmall);
+
+L.circleMarker([20.2961,85.8245],
+  {radius:10,color:"#1D9E75",fillColor:"#1D9E75",fillOpacity:1})
+  .addTo(mapSmall).bindPopup("Apollo Hospitals");
+
+L.circleMarker([20.2980,85.8320],
+  {radius:8,color:"#E24B4A",fillColor:"#E24B4A",fillOpacity:1})
+  .addTo(mapSmall).bindPopup("Patient");
+
+let ambM = L.circleMarker([20.2600,85.8000],
+  {radius:8,color:"#EF9F27",fillColor:"#EF9F27",fillOpacity:1})
+  .addTo(mapSmall).bindPopup("Ambulance");
+
+L.polyline([[20.2600,85.8000],[20.2980,85.8320],[20.2961,85.8245]],
+  {color:"#378ADD",dashArray:"6 4",weight:2}).addTo(mapSmall);
+
+// Animate ambulance
+let step = 0;
+const ambInterval = setInterval(() => {
+  step++;
+  const t = Math.min(step/20, 1);
+  ambM.setLatLng([20.2600+(20.2980-20.2600)*t, 85.8000+(85.8320-85.8000)*t]);
+  const eta = Math.max(0, Math.round(6*(1-t)));
+  document.getElementById("eta-live").textContent      = eta + " min";
+  document.getElementById("alert-eta-line").textContent =
+    eta > 0 ? "Ambulance arriving in " + eta + " min" : "Ambulance arrived at patient";
+  if (t >= 1) clearInterval(ambInterval);
+}, 2500);
+
+// Prep toggle
+const prepStates = [true,true,false,false,false,false];
+function togglePrep(idx) {
+  prepStates[idx] = !prepStates[idx];
+  const item  = document.getElementById("prep-" + idx);
+  const check = item.querySelector(".prep-check");
+  const label = item.querySelector(".prep-label");
+  const badge = item.querySelector(".prep-badge");
+  if (prepStates[idx]) {
+    check.classList.add("done");
+    check.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6l3 3 5-5" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+    label.classList.add("done");
+    badge.textContent  = "Done";
+    badge.className    = "prep-badge badge-green";
+  } else {
+    check.classList.remove("done");
+    check.innerHTML    = "";
+    label.classList.remove("done");
+    badge.textContent  = "Pending";
+    badge.className    = "prep-badge badge-amber";
+  }
+  fetch("/api/prep-status", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({incident_id:1001, item:idx, status: prepStates[idx]?"done":"pending"})
+  }).catch(()=>{});
+}
+
+// SocketIO events
+socket.on("hospital_alert", data => {
+  document.getElementById("al-name").textContent    = data.patient_name || "Patient";
+  document.getElementById("al-symptom").textContent = data.symptom      || "--";
+  document.getElementById("al-blood").textContent   = data.blood_group  || "--";
+  document.getElementById("al-zone").textContent    = data.zone_name    || "--";
+  document.getElementById("al-ai-note").textContent = data.ai_reason    || "--";
+});
+
+socket.on("ambulance_location", data => {
+  if (data.lat && data.lng) ambM.setLatLng([data.lat, data.lng]);
+  if (data.eta_min !== undefined)
+    document.getElementById("eta-live").textContent = data.eta_min + " min";
+});
+
+socket.on("ambulance_arrived", data => {
+  if (data.stage === "arrived_hospital") {
+    const dot = document.querySelector("#tl-6 .tl-dot");
+    const lbl = document.querySelector("#tl-6 .tl-label");
+    if (dot) dot.className = "tl-dot tl-done";
+    if (lbl) lbl.textContent = "Patient arrived — handoff in progress";
+  }
+});
+
+function acknowledgeAlert() {
+  document.querySelector(".ack-btn").textContent          = "Acknowledged ✓";
+  document.querySelector(".ack-btn").style.background     = "#243044";
+  document.querySelector(".ack-btn").style.pointerEvents  = "none";
+  document.getElementById("alert-priority").textContent   = "ACK";
+  document.getElementById("alert-priority").style.background = "#1D9E75";
+  fetch("/api/acknowledge", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({incident_id:1001, hospital_id:4})
+  }).catch(()=>{});
+}
+
+// Load zone stats from API
+fetch("/api/zone-stats")
+  .then(r => r.json())
+  .then(data => {
+    const keys   = ["st-a","st-b","st-c","st-d"];
+    const colors = ["#E24B4A","#EF9F27","#378ADD","#888"];
+    data.forEach((z,i) => {
+      const el = document.getElementById(keys[i]);
+      if (el) el.textContent = z.count;
+    });
+    document.getElementById("zone-tbody").innerHTML = data.map((z,i) => `
+      <tr>
+        <td><span class="zone-dot-sm" style="background:${colors[i]}"></span>${["Zone A","Zone B","Zone C","Zone D"][i]}</td>
+        <td>${z.count}</td>
+        <td>${z.avg_rating}★</td>
+        <td>${z.total_beds.toLocaleString()}</td>
+        <td>${z.er_count}</td>
+      </tr>`).join("");
+  }).catch(()=>{});
+</script>
+</body>
+</html>

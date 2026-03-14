@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IERN – Driver Tablet</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0f1923;color:#e8e8e8;height:100vh;display:flex;flex-direction:column}
+#topbar{background:#161f2e;padding:12px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid #243044;flex-shrink:0}
+.status-dot{width:9px;height:9px;border-radius:50%;background:#1D9E75;flex-shrink:0}
+.status-dot.red{background:#E24B4A}
+#topbar h2{font-size:15px;font-weight:700;color:#fff;flex:1}
+.vehicle-chip{background:#243044;padding:4px 12px;border-radius:20px;font-size:12px;color:#7a8ca8}
+#map{height:42vh;flex-shrink:0}
+#bottom-panel{flex:1;overflow-y:auto;background:#0f1923;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.info-card{background:#161f2e;border-radius:10px;padding:10px 12px;border:1px solid #243044}
+.info-val{font-size:20px;font-weight:700;color:#fff;margin-bottom:2px}
+.info-key{font-size:11px;color:#7a8ca8}
+.patient-card{background:#161f2e;border-radius:12px;padding:14px 16px;border:1px solid #243044;display:flex;align-items:center;gap:12px}
+.avatar{width:44px;height:44px;border-radius:50%;background:#2a1f1f;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:#E24B4A;flex-shrink:0;border:2px solid #E24B4A44}
+.p-name{font-size:14px;font-weight:600;color:#fff;margin-bottom:3px}
+.p-meta{font-size:12px;color:#7a8ca8}
+.sev-pill{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;margin-left:auto;flex-shrink:0;background:#2d1515;color:#E24B4A;border:1px solid #E24B4A44}
+.dest-card{background:#0e2a1e;border-radius:12px;padding:12px 16px;border:1px solid #1D9E7544;display:flex;align-items:center;gap:10px}
+.dest-icon{width:32px;height:32px;border-radius:8px;background:#1D9E7522;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dest-name{font-size:13px;font-weight:600;color:#5DCAA5}
+.dest-sub{font-size:11px;color:#0F6E56}
+.ai-insight{background:#1a1f35;border-radius:12px;padding:12px 16px;border:1px solid #378ADD33}
+.ai-title{font-size:11px;color:#378ADD;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px}
+.ai-text{font-size:12px;color:#a0b4cc;line-height:1.6}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.action-btn{padding:14px;border-radius:12px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s}
+.btn-call{background:#243044;color:#e8e8e8}
+.btn-arrived-p{background:#1D9E75;color:#fff}
+.btn-arrived-h{background:#E24B4A;color:#fff;grid-column:span 2;opacity:0.4;pointer-events:none}
+.btn-arrived-h.enabled{opacity:1;pointer-events:auto}
+#idle-state{text-align:center;padding:30px 0;color:#7a8ca8}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="status-dot" id="status-dot"></div>
+  <h2 id="topbar-title">Waiting for dispatch...</h2>
+  <span class="vehicle-chip">OD-02-MH-4821</span>
+</div>
+
+<div id="map"></div>
+
+<div id="bottom-panel">
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-val" id="eta-patient">-- min</div>
+      <div class="info-key">ETA to patient</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="eta-hospital">-- min</div>
+      <div class="info-key">ETA to hospital</div>
+    </div>
+    <div class="info-card">
+      <div class="info-val" id="total-dist">-- km</div>
+      <div class="info-key">Total route</div>
+    </div>
+  </div>
+
+  <div class="patient-card" id="patient-card" style="display:none">
+    <div class="avatar" id="patient-avatar">--</div>
+    <div>
+      <div class="p-name" id="patient-name">--</div>
+      <div class="p-meta" id="patient-meta">--</div>
+    </div>
+    <span class="sev-pill">High</span>
+  </div>
+
+  <div class="dest-card" id="dest-card" style="display:none">
+    <div class="dest-icon">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <rect x="3" y="2" width="12" height="14" rx="2" stroke="#5DCAA5" stroke-width="1.4"/>
+        <line x1="9" y1="2" x2="9" y2="16" stroke="#5DCAA5" stroke-width="1"/>
+        <line x1="3" y1="9" x2="15" y2="9" stroke="#5DCAA5" stroke-width="1"/>
+      </svg>
+    </div>
+    <div>
+      <div class="dest-name" id="dest-name">--</div>
+      <div class="dest-sub">Patient-selected · ER notified</div>
+    </div>
+  </div>
+
+  <div class="ai-insight" id="ai-insight" style="display:none">
+    <div class="ai-title">AI Route Insight</div>
+    <div class="ai-text" id="ai-text">--</div>
+  </div>
+
+  <div class="btn-row" id="btn-row" style="display:none">
+    <button class="action-btn btn-call" onclick="callPatient()">Call patient</button>
+    <button class="action-btn btn-arrived-p" onclick="markArrivedPatient()">Arrived at patient</button>
+    <button class="action-btn btn-arrived-h" id="btn-arrived-h" onclick="markArrivedHospital()">Arrived at hospital</button>
+  </div>
+
+  <div id="idle-state">
+    <div style="font-size:14px;margin-bottom:6px">No active incident</div>
+    <div style="font-size:12px">You will be notified when a patient calls</div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const socket = io();
+let map, driverMarker, patientMarker, hospMarker, routeLine;
+let INCIDENT_ID = null;
+let driverLat = 20.26, driverLng = 85.80;
+
+// Init map
+map = L.map("map").setView([20.30, 85.82], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {attribution:"© OpenStreetMap"}).addTo(map);
+
+driverMarker = L.circleMarker([driverLat, driverLng], {
+  radius:10, color:"#EF9F27", fillColor:"#EF9F27", fillOpacity:1
+}).addTo(map).bindPopup("You (ambulance)");
+
+// Push GPS every 5 seconds
+setInterval(() => {
+  navigator.geolocation?.getCurrentPosition(pos => {
+    driverLat = pos.coords.latitude;
+    driverLng = pos.coords.longitude;
+    driverMarker.setLatLng([driverLat, driverLng]);
+    if (INCIDENT_ID) {
+      socket.emit("driver_location_update", {
+        ambulance_id: 1,
+        incident_id:  INCIDENT_ID,
+        lat: driverLat,
+        lng: driverLng
+      });
+    }
+  });
+}, 5000);
+
+// Receive new incident from server
+socket.on("new_incident", data => {
+  INCIDENT_ID = data.incident_id;
+  document.getElementById("status-dot").className = "status-dot red";
+  document.getElementById("topbar-title").textContent = "Active dispatch";
+  document.getElementById("idle-state").style.display  = "none";
+  document.getElementById("patient-card").style.display = "flex";
+  document.getElementById("dest-card").style.display    = "flex";
+  document.getElementById("ai-insight").style.display   = "block";
+  document.getElementById("btn-row").style.display      = "grid";
+
+  const initials = (data.patient_name || "P").split(" ").map(w=>w[0]).join("").slice(0,2);
+  document.getElementById("patient-avatar").textContent = initials;
+  document.getElementById("patient-name").textContent   = data.patient_name + " · " + data.age_gender;
+  document.getElementById("patient-meta").textContent   = data.symptom + " · " + data.blood_group;
+  document.getElementById("dest-name").textContent      = data.hospital_name;
+  document.getElementById("eta-patient").textContent    = data.eta_patient_min  + " min";
+  document.getElementById("eta-hospital").textContent   = data.eta_hospital_min + " min";
+  document.getElementById("total-dist").textContent     = data.total_dist_km    + " km";
+  document.getElementById("ai-text").textContent        = data.ai_reason || "Hospital selected by patient based on zone and specialty match.";
+
+  if (patientMarker) map.removeLayer(patientMarker);
+  patientMarker = L.circleMarker([data.patient_lat, data.patient_lng],
+    {radius:10, color:"#E24B4A", fillColor:"#E24B4A", fillOpacity:1})
+    .addTo(map).bindPopup("Patient: " + data.patient_name);
+
+  if (hospMarker) map.removeLayer(hospMarker);
+  hospMarker = L.circleMarker([data.hospital_lat, data.hospital_lng],
+    {radius:10, color:"#1D9E75", fillColor:"#1D9E75", fillOpacity:1})
+    .addTo(map).bindPopup(data.hospital_name);
+
+  if (routeLine) map.removeLayer(routeLine);
+  routeLine = L.polyline([
+    [driverLat, driverLng],
+    [data.patient_lat, data.patient_lng],
+    [data.hospital_lat, data.hospital_lng]
+  ], {color:"#378ADD", dashArray:"8 5", weight:3}).addTo(map);
+
+  map.fitBounds(routeLine.getBounds(), {padding:[30,30]});
+  simulateMovement(data.patient_lat, data.patient_lng);
+});
+
+function simulateMovement(targetLat, targetLng) {
+  let step = 0;
+  const total = 10;
+  const sLat  = driverLat, sLng = driverLng;
+  const interval = setInterval(() => {
+    step++;
+    const t = step / total;
+    driverMarker.setLatLng([sLat+(targetLat-sLat)*t, sLng+(targetLng-sLng)*t]);
+    document.getElementById("eta-patient").textContent =
+      Math.max(0, Math.round(6*(1-t))) + " min";
+    if (step >= total) clearInterval(interval);
+  }, 2000);
+}
+
+function markArrivedPatient() {
+  document.getElementById("btn-arrived-h").classList.add("enabled");
+  document.getElementById("eta-patient").textContent = "0 min";
+  fetch("/api/mark-arrived", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({incident_id: INCIDENT_ID, stage:"arrived_patient"})
+  });
+}
+
+function markArrivedHospital() {
+  document.getElementById("btn-arrived-h").classList.remove("enabled");
+  document.getElementById("btn-arrived-h").style.opacity = "0.4";
+  document.getElementById("status-dot").className = "status-dot";
+  document.getElementById("topbar-title").textContent = "Handoff complete";
+  document.getElementById("eta-hospital").textContent = "0 min";
+  fetch("/api/mark-arrived", {
+    method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({incident_id: INCIDENT_ID, stage:"arrived_hospital"})
+  });
+}
+
+function callPatient() {
+  alert("Calling patient...\n(Connect Twilio for real calls in production)");
+}
+</script>
+</body>
+</html>

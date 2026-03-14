@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IERN – Emergency Response</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI',sans-serif;background:#f4f6fb;color:#222;min-height:100vh}
+  .screen{display:none;min-height:100vh;flex-direction:column}
+  .screen.active{display:flex}
+
+  /* ── SOS Screen ─────────────────────────────────────────── */
+  #sos-screen{
+    background:linear-gradient(160deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);
+    align-items:center;justify-content:center;text-align:center;padding:40px 20px
+  }
+  .sos-title{color:#fff;font-size:22px;font-weight:600;margin-bottom:6px}
+  .sos-sub{color:rgba(255,255,255,0.6);font-size:14px;margin-bottom:36px}
+  .sos-btn{
+    width:140px;height:140px;border-radius:50%;
+    background:#E24B4A;color:#fff;font-size:32px;font-weight:700;
+    border:6px solid rgba(255,255,255,0.25);cursor:pointer;letter-spacing:2px;
+    box-shadow:0 0 0 16px rgba(226,75,74,0.2),0 0 0 32px rgba(226,75,74,0.08);
+    transition:transform .15s
+  }
+  .sos-btn:active{transform:scale(0.94)}
+  .location-pill{
+    background:rgba(255,255,255,0.1);border-radius:20px;
+    padding:8px 16px;color:rgba(255,255,255,0.85);font-size:13px;
+    margin-top:28px
+  }
+
+  /* ── Hospital Picker ─────────────────────────────────────── */
+  #hospital-screen{background:#f4f6fb}
+  .top-bar{
+    background:#fff;padding:16px 20px;border-bottom:1px solid #eee;
+    display:flex;align-items:center;gap:12px
+  }
+  .top-bar h2{font-size:16px;font-weight:600;flex:1}
+  .severity-badge{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+  .sev-high{background:#FCEBEB;color:#A32D2D}
+  .sev-medium{background:#FAEEDA;color:#854F0B}
+  .sev-low{background:#EAF3DE;color:#3B6D11}
+
+  .ai-banner{
+    background:linear-gradient(90deg,#0f3460,#185FA5);
+    color:#fff;padding:12px 20px;font-size:13px;
+    display:flex;align-items:center;gap:10px
+  }
+  .ai-banner strong{font-size:14px}
+
+  .symptom-row{
+    padding:12px 20px;background:#fff;border-bottom:1px solid #eee;
+    display:flex;gap:10px;align-items:center
+  }
+  .symptom-select{
+    flex:1;padding:9px 12px;border-radius:10px;
+    border:1.5px solid #ddd;font-size:13px;background:#fff
+  }
+  .sev-select{
+    padding:9px 12px;border-radius:10px;
+    border:1.5px solid #ddd;font-size:13px;background:#fff
+  }
+
+  .zone-filter{display:flex;gap:8px;padding:12px 20px;overflow-x:auto}
+  .zone-chip{
+    flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;
+    font-weight:500;cursor:pointer;border:1.5px solid transparent;transition:all .15s
+  }
+  .zone-chip.active{border-color:currentColor;font-weight:600}
+
+  .hospital-list{
+    flex:1;overflow-y:auto;padding:12px 20px;
+    display:flex;flex-direction:column;gap:10px
+  }
+  .hospital-card{
+    background:#fff;border-radius:14px;padding:14px 16px;
+    border:1.5px solid #eee;cursor:pointer;transition:all .15s
+  }
+  .hospital-card:hover{border-color:#378ADD;box-shadow:0 4px 16px rgba(55,138,221,0.12)}
+  .hospital-card.selected{border-color:#1D9E75;background:#f0fdf8}
+  .hc-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}
+  .zone-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px}
+  .hc-name{font-size:14px;font-weight:600;flex:1}
+  .hc-dist{font-size:12px;color:#888;white-space:nowrap}
+  .hc-meta{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+  .chip{padding:3px 9px;border-radius:10px;font-size:11px;font-weight:500}
+  .chip-green{background:#E1F5EE;color:#085041}
+  .chip-blue{background:#E6F1FB;color:#0C447C}
+  .chip-amber{background:#FAEEDA;color:#633806}
+  .chip-gray{background:#F1EFE8;color:#5F5E5A}
+  .hc-ai{
+    background:#f0f4ff;border-radius:8px;padding:7px 10px;
+    font-size:12px;color:#185FA5;display:flex;align-items:flex-start;gap:6px;margin-bottom:6px
+  }
+  .hc-stars{font-size:13px;color:#EF9F27;margin-right:4px}
+
+  .confirm-bar{padding:16px 20px;background:#fff;border-top:1px solid #eee}
+  .confirm-btn{
+    width:100%;padding:14px;border-radius:12px;background:#1D9E75;
+    color:#fff;font-size:15px;font-weight:600;border:none;cursor:pointer
+  }
+  .confirm-btn:disabled{background:#ccc;cursor:not-allowed}
+
+  /* ── Tracking Screen ─────────────────────────────────────── */
+  #tracking-screen{background:#fff}
+  #map{height:300px;width:100%}
+  .tracking-card{padding:16px 20px;border-top:1px solid #eee}
+  .eta-row{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+  .eta-num{font-size:36px;font-weight:700;color:#1a1a2e}
+  .eta-unit{font-size:16px;color:#888}
+  .eta-dest{font-size:13px;color:#888;margin-bottom:14px}
+  .driver-row{
+    display:flex;align-items:center;gap:12px;padding:12px;
+    background:#f4f6fb;border-radius:12px;margin-bottom:12px
+  }
+  .driver-avatar{
+    width:42px;height:42px;border-radius:50%;
+    background:#E6F1FB;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:15px;color:#185FA5;flex-shrink:0
+  }
+  .driver-name{font-size:14px;font-weight:600}
+  .driver-plate{font-size:12px;color:#888}
+  .call-btn{
+    margin-left:auto;padding:8px 16px;border-radius:20px;
+    background:#1D9E75;color:#fff;font-size:13px;font-weight:500;border:none;cursor:pointer
+  }
+  .hospital-dest-chip{
+    background:#E1F5EE;border-radius:10px;padding:8px 12px;
+    font-size:12px;color:#085041;margin-bottom:12px;display:flex;align-items:center;gap:8px
+  }
+  .status-timeline{border-top:1px solid #eee;padding-top:14px}
+  .tl-item{display:flex;gap:12px;padding:6px 0}
+  .tl-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:3px}
+  .tl-dot-done{background:#1D9E75}
+  .tl-dot-active{background:#378ADD;box-shadow:0 0 0 4px rgba(55,138,221,0.25)}
+  .tl-dot-pending{background:#e0e0e0}
+  .tl-label{font-size:13px;font-weight:500}
+  .tl-time{font-size:11px;color:#888}
+</style>
+</head>
+<body>
+
+<!-- ═══ SCREEN 1: SOS ══════════════════════════════════════════ -->
+<div id="sos-screen" class="screen active">
+  <div class="sos-title">IERN Emergency Response</div>
+  <div class="sos-sub">Odisha · AI-powered ambulance network</div>
+  <button class="sos-btn" onclick="startEmergency()">SOS</button>
+  <div class="location-pill" id="location-pill">Detecting location...</div>
+</div>
+
+<!-- ═══ SCREEN 2: HOSPITAL PICKER ══════════════════════════════ -->
+<div id="hospital-screen" class="screen">
+  <div class="top-bar">
+    <h2>Choose hospital</h2>
+    <span class="severity-badge sev-high" id="sev-badge">High</span>
+  </div>
+
+  <div class="symptom-row">
+    <select class="symptom-select" id="symptom-sel" onchange="reloadRecommendations()">
+      <option value="chest pain">Chest pain / cardiac</option>
+      <option value="accident">Accident / trauma</option>
+      <option value="stroke">Stroke</option>
+      <option value="fracture">Fracture / ortho</option>
+      <option value="breathing">Breathing difficulty</option>
+      <option value="unconscious">Unconscious</option>
+      <option value="general">General emergency</option>
+    </select>
+    <select class="sev-select" id="sev-sel" onchange="reloadRecommendations()">
+      <option value="high">High</option>
+      <option value="medium">Medium</option>
+      <option value="low">Low</option>
+    </select>
+  </div>
+
+  <div class="ai-banner">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="8" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+      <path d="M6 9l2 2 4-4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <strong>AI Recommendation</strong> · Ranked by zone, distance &amp; specialty
+    </div>
+  </div>
+
+  <div class="zone-filter" id="zone-filter">
+    <div class="zone-chip active" data-zone="all"
+         style="background:#f0f4ff;color:#185FA5"
+         onclick="filterZone('all', this)">All zones</div>
+  </div>
+
+  <div class="hospital-list" id="hospital-list">
+    <div style="text-align:center;padding:40px;color:#888">
+      Loading hospitals...
+    </div>
+  </div>
+
+  <div class="confirm-bar">
+    <button class="confirm-btn" id="confirm-btn" disabled onclick="confirmHospital()">
+      Select a hospital to continue
+    </button>
+  </div>
+</div>
+
+<!-- ═══ SCREEN 3: LIVE TRACKING ════════════════════════════════ -->
+<div id="tracking-screen" class="screen">
+  <div id="map"></div>
+  <div class="tracking-card">
+
+    <div class="eta-row">
+      <span class="eta-num" id="eta-num">6</span>
+      <span class="eta-unit">min</span>
+    </div>
+    <div class="eta-dest" id="eta-dest">Ambulance en route to you</div>
+
+    <div class="hospital-dest-chip">
+      <svg width="14" height="14" viewBox="0 0 14 14">
+        <rect x="3" y="1" width="8" height="12" rx="1" fill="none"
+              stroke="#0F6E56" stroke-width="1.2"/>
+        <line x1="7" y1="1" x2="7" y2="13" stroke="#0F6E56" stroke-width="0.8"/>
+        <line x1="3" y1="7" x2="11" y2="7" stroke="#0F6E56" stroke-width="0.8"/>
+      </svg>
+      <span id="dest-hospital-name">--</span>
+      <span style="margin-left:auto;font-size:11px;color:#1D9E75">~14 min total</span>
+    </div>
+
+    <div class="driver-row">
+      <div class="driver-avatar" id="driver-initials">RD</div>
+      <div>
+        <div class="driver-name" id="driver-name-disp">Rajan Das</div>
+        <div class="driver-plate" id="driver-plate-disp">OD-02-MH-4821</div>
+      </div>
+      <button class="call-btn">Call driver</button>
+    </div>
+
+    <div class="status-timeline" id="status-timeline"></div>
+
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+// ── State ──────────────────────────────────────────────────────
+let userLat = 20.2961, userLng = 85.8245;
+let selectedHospital = null;
+let allHospitals = [];
+let map, userMarker, ambMarker, hospitalMarker;
+
+// ── Helpers ────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+// ── SOS button ─────────────────────────────────────────────────
+function startEmergency() {
+  document.getElementById("location-pill").textContent = "Getting your location...";
+  navigator.geolocation.getCurrentPosition(pos => {
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+    document.getElementById("location-pill").textContent =
+      "Location: " + userLat.toFixed(4) + ", " + userLng.toFixed(4);
+    loadHospitalScreen();
+  }, () => {
+    loadHospitalScreen();
+  });
+}
+
+// ── Load hospital picker ───────────────────────────────────────
+function loadHospitalScreen() {
+  showScreen("hospital-screen");
+  const symptom  = document.getElementById("symptom-sel").value;
+  const severity = document.getElementById("sev-sel").value;
+  updateSeverityBadge(severity);
+  fetchRecommendations(symptom, severity);
+}
+
+function reloadRecommendations() {
+  const symptom  = document.getElementById("symptom-sel").value;
+  const severity = document.getElementById("sev-sel").value;
+  updateSeverityBadge(severity);
+  selectedHospital = null;
+  document.getElementById("confirm-btn").disabled = true;
+  document.getElementById("confirm-btn").textContent = "Select a hospital to continue";
+  fetchRecommendations(symptom, severity);
+}
+
+function updateSeverityBadge(sev) {
+  const b = document.getElementById("sev-badge");
+  b.textContent = sev.charAt(0).toUpperCase() + sev.slice(1);
+  b.className   = "severity-badge sev-" + sev;
+}
+
+// ── Fetch AI recommendations from Flask ───────────────────────
+function fetchRecommendations(symptom, severity) {
+  document.getElementById("hospital-list").innerHTML =
+    '<div style="text-align:center;padding:40px;color:#888">AI is ranking hospitals...</div>';
+
+  fetch("/api/recommend", {
+    method:  "POST",
+    headers: {"Content-Type": "application/json"},
+    body:    JSON.stringify({lat: userLat, lng: userLng, symptom, severity})
+  })
+  .then(r => r.json())
+  .then(data => {
+    allHospitals = data.recommendations;
+    buildZoneFilter(allHospitals);
+    renderHospitalList(allHospitals);
+  })
+  .catch(() => {
+    document.getElementById("hospital-list").innerHTML =
+      '<div style="text-align:center;padding:40px;color:#E24B4A">Could not load hospitals. Is the server running?</div>';
+  });
+}
+
+// ── Zone filter chips ──────────────────────────────────────────
+function buildZoneFilter(hospitals) {
+  const zones = {};
+  hospitals.forEach(h => {
+    zones[h.zone_id] = {name: h.zone_name, color: h.zone_color};
+  });
+
+  const container = document.getElementById("zone-filter");
+  container.innerHTML =
+    `<div class="zone-chip active" data-zone="all"
+       style="background:#f0f4ff;color:#185FA5"
+       onclick="filterZone('all',this)">All</div>`;
+
+  Object.entries(zones).forEach(([zid, z]) => {
+    const labels = ["A","B","C","D"];
+    const chip   = document.createElement("div");
+    chip.className      = "zone-chip";
+    chip.dataset.zone   = zid;
+    chip.style.color    = z.color;
+    chip.style.background = z.color + "18";
+    chip.onclick        = function(){ filterZone(zid, this); };
+    chip.textContent    = "Zone " + (labels[zid] || zid);
+    container.appendChild(chip);
+  });
+}
+
+function filterZone(zid, el) {
+  document.querySelectorAll(".zone-chip").forEach(c => c.classList.remove("active"));
+  el.classList.add("active");
+  const filtered = zid === "all"
+    ? allHospitals
+    : allHospitals.filter(h => String(h.zone_id) === String(zid));
+  renderHospitalList(filtered);
+}
+
+// ── Render hospital cards ──────────────────────────────────────
+function renderHospitalList(hospitals) {
+  const list = document.getElementById("hospital-list");
+  if (!hospitals.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:#888">No hospitals in this zone</div>';
+    return;
+  }
+
+  list.innerHTML = hospitals.map((h, i) => `
+    <div class="hospital-card" id="hc-${h.id}" onclick="selectHospital(${h.id})">
+
+      ${i === 0 ? `<div style="margin-bottom:8px">
+        <span style="background:${h.ai_badge.color};color:#fff;font-size:11px;
+          font-weight:600;padding:3px 10px;border-radius:20px">
+          ${h.ai_badge.label}
+        </span>
+      </div>` : ""}
+
+      <div class="hc-top">
+        <div class="zone-dot" style="background:${h.zone_color}"></div>
+        <div class="hc-name">${h.name}</div>
+        <div class="hc-dist">${h.distance_km} km</div>
+      </div>
+
+      <div class="hc-meta">
+        <span class="chip chip-green">${h.specialty}</span>
+        <span class="chip ${h.er_available ? 'chip-green' : 'chip-gray'}">
+          ${h.er_available ? 'ER open' : 'No ER'}
+        </span>
+        <span class="chip chip-blue">${h.beds} beds</span>
+        <span class="chip chip-amber">${h.zone_name.split("–")[0].trim()}</span>
+      </div>
+
+      <div class="hc-ai">
+        <svg width="14" height="14" viewBox="0 0 14 14" style="flex-shrink:0;margin-top:1px">
+          <circle cx="7" cy="7" r="6" fill="none" stroke="#185FA5" stroke-width="1"/>
+          <path d="M4.5 7l2 2 3-3" stroke="#185FA5" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        <span>${h.ai_reason}</span>
+      </div>
+
+      <div style="display:flex;align-items:center">
+        <span class="hc-stars">
+          ${"★".repeat(Math.round(h.rating))}${"☆".repeat(5 - Math.round(h.rating))}
+        </span>
+        <span style="font-size:12px;color:#888">${h.rating} · ${h.type}</span>
+        <span style="margin-left:auto;font-size:12px;color:#888">
+          ${h.city}, ${h.district}
+        </span>
+      </div>
+
+    </div>`).join("");
+}
+
+// ── Select hospital ────────────────────────────────────────────
+function selectHospital(id) {
+  document.querySelectorAll(".hospital-card").forEach(c => c.classList.remove("selected"));
+  document.getElementById("hc-" + id).classList.add("selected");
+  selectedHospital = allHospitals.find(h => h.id === id);
+  const btn     = document.getElementById("confirm-btn");
+  btn.disabled  = false;
+  btn.textContent = "Confirm " + selectedHospital.name;
+}
+
+// ── Confirm hospital → call ambulance ─────────────────────────
+function confirmHospital() {
+  if (!selectedHospital) return;
+
+  fetch("/api/call-ambulance", {
+    method:  "POST",
+    headers: {"Content-Type": "application/json"},
+    body:    JSON.stringify({
+      patient_name:  "Patient",
+      age_gender:    "Unknown",
+      symptom:       document.getElementById("symptom-sel").value,
+      severity:      document.getElementById("sev-sel").value,
+      blood_group:   "O+",
+      lat:           userLat,
+      lng:           userLng,
+      hospital_id:   selectedHospital.id,
+      hospital_name: selectedHospital.name,
+      hospital_lat:  selectedHospital.lat,
+      hospital_lng:  selectedHospital.lng,
+      zone_name:     selectedHospital.zone_name,
+      ai_reason:     selectedHospital.ai_reason
+    })
+  });
+
+  showTrackingScreen();
+}
+
+// ── Tracking screen ────────────────────────────────────────────
+function showTrackingScreen() {
+  showScreen("tracking-screen");
+  document.getElementById("dest-hospital-name").textContent = selectedHospital.name;
+  document.getElementById("eta-num").textContent = "6";
+  document.getElementById("eta-dest").textContent = "Ambulance en route to you";
+  setTimeout(initMap, 100);
+  initTimeline();
+  simulateAmbulance();
+}
+
+function initMap() {
+  if (map) { map.remove(); map = null; }
+  map = L.map("map").setView([userLat, userLng], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {attribution: "© OpenStreetMap contributors"}).addTo(map);
+
+  userMarker = L.circleMarker([userLat, userLng], {
+    radius: 10, color: "#E24B4A", fillColor: "#E24B4A", fillOpacity: 1
+  }).addTo(map).bindPopup("You are here");
+
+  hospitalMarker = L.circleMarker([selectedHospital.lat, selectedHospital.lng], {
+    radius: 10, color: "#1D9E75", fillColor: "#1D9E75", fillOpacity: 1
+  }).addTo(map).bindPopup(selectedHospital.name);
+
+  L.polyline(
+    [[userLat, userLng], [selectedHospital.lat, selectedHospital.lng]],
+    {color: "#378ADD", dashArray: "8 5", weight: 3}
+  ).addTo(map);
+
+  const ambLat = userLat - 0.03;
+  const ambLng = userLng - 0.02;
+  ambMarker = L.circleMarker([ambLat, ambLng], {
+    radius: 10, color: "#EF9F27", fillColor: "#EF9F27", fillOpacity: 1
+  }).addTo(map).bindPopup("Ambulance");
+}
+
+function simulateAmbulance() {
+  let step = 0;
+  const total   = 12;
+  const startLat = userLat - 0.03;
+  const startLng = userLng - 0.02;
+
+  const interval = setInterval(() => {
+    step++;
+    const t   = step / total;
+    const lat = startLat + (userLat - startLat) * t;
+    const lng = startLng + (userLng - startLng) * t;
+    if (ambMarker) ambMarker.setLatLng([lat, lng]);
+
+    const remaining = Math.max(0, Math.round(6 * (1 - t)));
+    document.getElementById("eta-num").textContent = remaining;
+
+    if (step >= total) {
+      clearInterval(interval);
+      document.getElementById("eta-dest").textContent = "Ambulance has arrived!";
+      addTimelineEvent("Ambulance arrived at your location", "Now", "done");
+    }
+  }, 2000);
+}
+
+function initTimeline() {
+  const tl  = document.getElementById("status-timeline");
+  const now = new Date();
+  const fmt = d => d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+
+  tl.innerHTML = [
+    {label: "Emergency call placed",                        time: fmt(now),                              state: "done"},
+    {label: selectedHospital.name + " selected by you",    time: fmt(now),                              state: "done"},
+    {label: "Ambulance dispatched",                        time: fmt(now),                              state: "active"},
+    {label: "Arriving at hospital",                        time: "~" + fmt(new Date(Date.now()+840000)),state: "pending"},
+  ].map(e => `
+    <div class="tl-item">
+      <div class="tl-dot tl-dot-${e.state}"></div>
+      <div>
+        <div class="tl-label">${e.label}</div>
+        <div class="tl-time">${e.time}</div>
+      </div>
+    </div>`).join("");
+}
+
+function addTimelineEvent(label, time, state) {
+  document.getElementById("status-timeline").innerHTML += `
+    <div class="tl-item">
+      <div class="tl-dot tl-dot-${state}"></div>
+      <div>
+        <div class="tl-label">${label}</div>
+        <div class="tl-time">${time}</div>
+      </div>
+    </div>`;
+}
+
+// ── Detect location on page load ───────────────────────────────
+window.onload = () => {
+  navigator.geolocation?.getCurrentPosition(pos => {
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+    document.getElementById("location-pill").textContent =
+      "Location detected · " + userLat.toFixed(4) + ", " + userLng.toFixed(4);
+  }, () => {
+    document.getElementById("location-pill").textContent =
+      "Location: Bhubaneswar (default)";
+  });
+};
+</script>
+</body>
+</html>
