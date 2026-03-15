@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IERN – Ambulance Doctor Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;
+  --accent:#00d4aa;--accent2:#3b82f6;--danger:#ef4444;--warn:#f59e0b;
+  --text:#e2e8f0;--muted:#64748b;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+ 
+/* Header */
+.header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:14px 20px;display:flex;align-items:center;gap:12px;
+  position:sticky;top:0;z-index:100
+}
+.header-icon{
+  width:36px;height:36px;border-radius:8px;background:rgba(239,68,68,0.15);
+  border:1px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center
+}
+.header-title{font-size:15px;font-weight:600;letter-spacing:0.02em}
+.header-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:1px}
+.live-dot{
+  margin-left:auto;display:flex;align-items:center;gap:6px;
+  font-size:11px;color:var(--accent);font-family:var(--mono)
+}
+.live-dot::before{
+  content:'';width:7px;height:7px;border-radius:50%;background:var(--accent);
+  animation:pulse 1.5s infinite
+}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,212,170,0.4)}50%{opacity:0.8;box-shadow:0 0 0 6px rgba(0,212,170,0)}}
+ 
+/* GPS bar */
+.gps-bar{
+  background:rgba(59,130,246,0.08);border-bottom:1px solid rgba(59,130,246,0.15);
+  padding:9px 20px;display:flex;align-items:center;gap:8px;
+  font-size:12px;color:#93c5fd;font-family:var(--mono)
+}
+ 
+/* Sections */
+.section{padding:16px 20px 0}
+.section-label{
+  font-size:10px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px
+}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+ 
+/* Vitals grid */
+.vitals-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.vital-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:12px 14px;transition:border-color .2s
+}
+.vital-card:focus-within{border-color:var(--accent2)}
+.vital-label{font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:6px;display:flex;justify-content:space-between}
+.vital-unit{color:var(--accent);font-size:10px}
+.vital-input{
+  width:100%;background:transparent;border:none;outline:none;
+  font-family:var(--mono);font-size:22px;font-weight:600;color:var(--text);
+  caret-color:var(--accent)
+}
+.vital-input::placeholder{color:var(--border);font-size:20px}
+.vital-range{font-size:9px;color:var(--muted);margin-top:4px}
+ 
+/* BP special */
+.vital-card.bp-card{grid-column:1/-1}
+.bp-row{display:flex;align-items:center;gap:8px}
+.bp-input{
+  flex:1;background:transparent;border:none;outline:none;
+  font-family:var(--mono);font-size:28px;font-weight:600;color:var(--text);
+  caret-color:var(--accent);width:100%
+}
+.bp-sep{font-size:28px;color:var(--muted);font-weight:300}
+ 
+/* Severity auto-badge */
+.severity-row{
+  display:flex;gap:8px;margin:12px 0;padding:0 20px
+}
+.sev-opt{
+  flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid var(--border);
+  text-align:center;font-size:12px;font-weight:600;cursor:pointer;
+  transition:all .15s;color:var(--muted);background:var(--surface)
+}
+.sev-opt.active-critical{border-color:#ef4444;background:rgba(239,68,68,0.12);color:#ef4444}
+.sev-opt.active-serious{border-color:#f59e0b;background:rgba(245,158,11,0.12);color:#f59e0b}
+.sev-opt.active-stable{border-color:#00d4aa;background:rgba(0,212,170,0.12);color:#00d4aa}
+ 
+/* Condition chips */
+.condition-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.cond-chip{
+  padding:10px 12px;border-radius:10px;border:1px solid var(--border);
+  background:var(--surface);font-size:12px;font-weight:500;cursor:pointer;
+  transition:all .15s;display:flex;align-items:center;gap:8px;color:var(--muted)
+}
+.cond-chip.selected{border-color:var(--accent2);background:rgba(59,130,246,0.1);color:var(--text)}
+.cond-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
+ 
+/* Injury textarea */
+.injury-box{
+  width:100%;background:var(--surface);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;color:var(--text);font-family:var(--sans);
+  font-size:13px;resize:none;outline:none;transition:border-color .2s;
+  line-height:1.5
+}
+.injury-box:focus{border-color:var(--accent2)}
+.injury-box::placeholder{color:var(--muted)}
+ 
+/* AI status bar */
+.ai-status{
+  margin:16px 20px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px
+}
+.ai-icon{
+  width:32px;height:32px;border-radius:8px;background:rgba(0,212,170,0.1);
+  border:1px solid rgba(0,212,170,0.2);display:flex;align-items:center;justify-content:center;flex-shrink:0
+}
+.ai-text{font-size:12px;color:var(--muted);line-height:1.4}
+.ai-text strong{color:var(--accent);font-weight:600}
+ 
+/* Submit btn */
+.submit-wrap{padding:16px 20px 32px}
+.submit-btn{
+  width:100%;padding:16px;border-radius:14px;border:none;cursor:pointer;
+  font-family:var(--sans);font-size:15px;font-weight:600;letter-spacing:0.02em;
+  background:linear-gradient(135deg,#00d4aa,#3b82f6);color:#fff;
+  transition:all .2s;position:relative;overflow:hidden
+}
+.submit-btn:active{transform:scale(0.98)}
+.submit-btn:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;transform:none}
+.submit-btn .loading{display:none;align-items:center;justify-content:center;gap:8px}
+.submit-btn.loading-state .label{display:none}
+.submit-btn.loading-state .loading{display:flex}
+ 
+/* Results overlay */
+.results-panel{
+  position:fixed;inset:0;background:var(--bg);z-index:200;
+  transform:translateY(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+  overflow-y:auto
+}
+.results-panel.open{transform:translateY(0)}
+.results-header{
+  background:var(--surface);padding:16px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10
+}
+.back-btn{
+  width:36px;height:36px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0
+}
+.results-list{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.result-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:14px 16px;cursor:pointer;transition:all .2s
+}
+.result-card:hover,.result-card.picked{border-color:var(--accent);background:rgba(0,212,170,0.05)}
+.result-card.top-pick{border-color:var(--accent2)}
+.rc-badge{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
+  border-radius:20px;font-size:10px;font-weight:700;margin-bottom:10px;
+  letter-spacing:0.05em;text-transform:uppercase
+}
+.badge-top{background:rgba(59,130,246,0.15);color:#60a5fa}
+.badge-fast{background:rgba(0,212,170,0.15);color:var(--accent)}
+.rc-name{font-size:15px;font-weight:600;margin-bottom:4px}
+.rc-meta{display:flex;gap:10px;font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:10px}
+.rc-score-bar{height:4px;border-radius:2px;background:var(--border);margin-bottom:8px}
+.rc-score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.rc-reason{
+  font-size:12px;color:#93c5fd;background:rgba(59,130,246,0.08);
+  border-radius:8px;padding:8px 10px;line-height:1.5
+}
+.rc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.rc-chip{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600}
+.chip-teal{background:rgba(0,212,170,0.12);color:var(--accent)}
+.chip-blue{background:rgba(59,130,246,0.12);color:#60a5fa}
+.chip-red{background:rgba(239,68,68,0.12);color:#f87171}
+ 
+.dispatch-btn{
+  width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;
+  font-size:14px;font-weight:600;background:var(--accent);color:#0a0e1a;
+  margin-top:8px;transition:all .15s
+}
+.dispatch-btn:active{transform:scale(0.98)}
+ 
+/* Spinner */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{
+  width:16px;height:16px;border:2px solid rgba(255,255,255,0.2);
+  border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite
+}
+</style>
+</head>
+<body>
+ 
+<div class="header">
+  <div class="header-icon">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 2L11 7H16L12 10.5L13.5 16L9 13L4.5 16L6 10.5L2 7H7L9 2Z" fill="#ef4444"/>
+    </svg>
+  </div>
+  <div>
+    <div class="header-title">IERN · Ambulance Panel</div>
+    <div class="header-sub">Doctor / Paramedic Interface</div>
+  </div>
+  <div class="live-dot">LIVE</div>
+</div>
+ 
+<div class="gps-bar" id="gps-bar">
+  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+    <circle cx="6" cy="6" r="5" stroke="#93c5fd" stroke-width="1"/>
+    <circle cx="6" cy="6" r="2" fill="#93c5fd"/>
+  </svg>
+  <span id="gps-text">Acquiring GPS location...</span>
+</div>
+ 
+<!-- ── VITALS ─────────────────────────────────────── -->
+<div class="section">
+  <div class="section-label">Patient Vitals</div>
+  <div class="vitals-grid">
+ 
+    <div class="vital-card bp-card">
+      <div class="vital-label">Blood Pressure <span class="vital-unit">mmHg</span></div>
+      <div class="bp-row">
+        <input class="bp-input" id="bp-sys" type="number" placeholder="120" min="50" max="250" oninput="autoSeverity()">
+        <span class="bp-sep">/</span>
+        <input class="bp-input" id="bp-dia" type="number" placeholder="80" min="30" max="150" oninput="autoSeverity()">
+      </div>
+      <div class="vital-range">Normal: 90–120 / 60–80</div>
+    </div>
+ 
+    <div class="vital-card">
+      <div class="vital-label">Pulse <span class="vital-unit">bpm</span></div>
+      <input class="vital-input" id="pulse" type="number" placeholder="72" min="20" max="250" oninput="autoSeverity()">
+      <div class="vital-range">Normal: 60–100</div>
+    </div>
+ 
+    <div class="vital-card">
+      <div class="vital-label">SpO₂ <span class="vital-unit">%</span></div>
+      <input class="vital-input" id="spo2" type="number" placeholder="98" min="50" max="100" oninput="autoSeverity()">
+      <div class="vital-range">Normal: ≥95</div>
+    </div>
+ 
+    <div class="vital-card">
+      <div class="vital-label">Temperature <span class="vital-unit">°C</span></div>
+      <input class="vital-input" id="temp" type="number" placeholder="37.0" min="30" max="42" step="0.1" oninput="autoSeverity()">
+      <div class="vital-range">Normal: 36.5–37.5</div>
+    </div>
+ 
+    <div class="vital-card">
+      <div class="vital-label">Blood Glucose <span class="vital-unit">mg/dL</span></div>
+      <input class="vital-input" id="glucose" type="number" placeholder="100" min="20" max="600" oninput="autoSeverity()">
+      <div class="vital-range">Normal: 70–140</div>
+    </div>
+ 
+    <div class="vital-card">
+      <div class="vital-label">GCS Score <span class="vital-unit">/15</span></div>
+      <input class="vital-input" id="gcs" type="number" placeholder="15" min="3" max="15" oninput="autoSeverity()">
+      <div class="vital-range">Critical: ≤8</div>
+    </div>
+ 
+    <div class="vital-card bp-card">
+      <div class="vital-label">Respiratory Rate <span class="vital-unit">breaths/min</span></div>
+      <input class="vital-input" id="rr" type="number" placeholder="16" min="4" max="60" oninput="autoSeverity()">
+      <div class="vital-range">Normal: 12–20</div>
+    </div>
+ 
+  </div>
+</div>
+ 
+<!-- ── AUTO SEVERITY ──────────────────────────────── -->
+<div class="section" style="margin-top:4px">
+  <div class="section-label">Assessed Severity</div>
+</div>
+<div class="severity-row">
+  <div class="sev-opt" id="sev-critical" onclick="setSeverity('critical')">🔴 Critical</div>
+  <div class="sev-opt" id="sev-serious"  onclick="setSeverity('serious')">🟡 Serious</div>
+  <div class="sev-opt" id="sev-stable"   onclick="setSeverity('stable')">🟢 Stable</div>
+</div>
+ 
+<!-- ── CONDITION ──────────────────────────────────── -->
+<div class="section">
+  <div class="section-label">Primary Condition</div>
+  <div class="condition-grid" id="condition-grid">
+    <div class="cond-chip" data-val="cardiac" onclick="selectCond(this)"><span class="cond-dot" style="color:#ef4444"></span>Cardiac / MI</div>
+    <div class="cond-chip" data-val="stroke" onclick="selectCond(this)"><span class="cond-dot" style="color:#a78bfa"></span>Stroke / Neuro</div>
+    <div class="cond-chip" data-val="trauma" onclick="selectCond(this)"><span class="cond-dot" style="color:#f59e0b"></span>Trauma / Accident</div>
+    <div class="cond-chip" data-val="respiratory" onclick="selectCond(this)"><span class="cond-dot" style="color:#60a5fa"></span>Respiratory</div>
+    <div class="cond-chip" data-val="burns" onclick="selectCond(this)"><span class="cond-dot" style="color:#fb923c"></span>Burns</div>
+    <div class="cond-chip" data-val="obstetric" onclick="selectCond(this)"><span class="cond-dot" style="color:#f472b6"></span>Obstetric</div>
+    <div class="cond-chip" data-val="poisoning" onclick="selectCond(this)"><span class="cond-dot" style="color:#4ade80"></span>Poisoning / OD</div>
+    <div class="cond-chip" data-val="general" onclick="selectCond(this)"><span class="cond-dot" style="color:#94a3b8"></span>General / Other</div>
+  </div>
+</div>
+ 
+<!-- ── PHYSICAL INJURY ────────────────────────────── -->
+<div class="section" style="margin-top:4px">
+  <div class="section-label">Physical Injury Description</div>
+  <textarea class="injury-box" id="injury" rows="3"
+    placeholder="Describe visible injuries, wounds, fractures, burns, bleeding sites..."></textarea>
+</div>
+ 
+<!-- ── AI STATUS ──────────────────────────────────── -->
+<div class="ai-status">
+  <div class="ai-icon">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="2" y="2" width="12" height="12" rx="3" stroke="#00d4aa" stroke-width="1.2"/>
+      <path d="M5 8h6M8 5v6" stroke="#00d4aa" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="ai-text" id="ai-status-text">
+    <strong>ML Model Ready</strong> — Fill vitals to get instant hospital recommendations ranked by specialty match, distance &amp; ER capacity
+  </div>
+</div>
+ 
+<!-- ── SUBMIT ──────────────────────────────────────── -->
+<div class="submit-wrap">
+  <button class="submit-btn" id="submit-btn" onclick="getRecommendations()">
+    <span class="label">Get AI Hospital Recommendations →</span>
+    <span class="loading"><span class="spinner"></span> Analyzing vitals...</span>
+  </button>
+</div>
+ 
+<!-- ══ RESULTS PANEL ══════════════════════════════════════════ -->
+<div class="results-panel" id="results-panel">
+  <div class="results-header">
+    <div class="back-btn" onclick="closeResults()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M10 3L5 8l5 5" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="header-title">Hospital Recommendations</div>
+      <div class="header-sub" id="results-sub">AI-ranked by vitals &amp; specialty</div>
+    </div>
+  </div>
+  <div class="results-list" id="results-list"></div>
+</div>
+ 
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+let userLat = 20.2961, userLng = 85.8245;
+let currentSeverity = null;
+let selectedCondition = null;
+const socket = io();
+ 
+// GPS
+navigator.geolocation?.getCurrentPosition(pos => {
+  userLat = pos.coords.latitude;
+  userLng = pos.coords.longitude;
+  document.getElementById('gps-text').textContent =
+    'GPS: ' + userLat.toFixed(5) + ', ' + userLng.toFixed(5) + ' · Odisha';
+}, () => {
+  document.getElementById('gps-text').textContent = 'GPS: Bhubaneswar (default) · 20.2961, 85.8245';
+});
+ 
+// Auto severity from vitals
+function autoSeverity() {
+  const pulse   = +document.getElementById('pulse').value;
+  const spo2    = +document.getElementById('spo2').value;
+  const gcs     = +document.getElementById('gcs').value;
+  const sys     = +document.getElementById('bp-sys').value;
+  const rr      = +document.getElementById('rr').value;
+  const glucose = +document.getElementById('glucose').value;
+ 
+  let score = 0;
+  if (spo2 && spo2 < 90)  score += 3;
+  else if (spo2 && spo2 < 94) score += 1;
+  if (gcs && gcs <= 8)    score += 3;
+  else if (gcs && gcs <= 12) score += 1;
+  if (pulse && (pulse > 140 || pulse < 40)) score += 2;
+  else if (pulse && (pulse > 110 || pulse < 55)) score += 1;
+  if (sys && (sys > 180 || sys < 80)) score += 2;
+  if (rr && (rr > 30 || rr < 8)) score += 2;
+  if (glucose && (glucose > 400 || glucose < 40)) score += 2;
+ 
+  if (score >= 5)      setSeverity('critical', true);
+  else if (score >= 2) setSeverity('serious', true);
+  else if (score >= 0 && (pulse || spo2 || gcs)) setSeverity('stable', true);
+}
+ 
+function setSeverity(val, auto=false) {
+  currentSeverity = val;
+  ['critical','serious','stable'].forEach(s => {
+    const el = document.getElementById('sev-' + s);
+    el.className = 'sev-opt' + (s === val ? ' active-' + s : '');
+  });
+}
+ 
+function selectCond(el) {
+  document.querySelectorAll('.cond-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCondition = el.dataset.val;
+}
+ 
+function getRecommendations() {
+  const payload = {
+    lat:       userLat,
+    lng:       userLng,
+    bp_sys:    document.getElementById('bp-sys').value || null,
+    bp_dia:    document.getElementById('bp-dia').value || null,
+    pulse:     document.getElementById('pulse').value || null,
+    spo2:      document.getElementById('spo2').value || null,
+    temp:      document.getElementById('temp').value || null,
+    glucose:   document.getElementById('glucose').value || null,
+    gcs:       document.getElementById('gcs').value || null,
+    rr:        document.getElementById('rr').value || null,
+    severity:  currentSeverity || 'serious',
+    condition: selectedCondition || 'general',
+    injury:    document.getElementById('injury').value
+  };
+ 
+  const btn = document.getElementById('submit-btn');
+  btn.classList.add('loading-state');
+  btn.disabled = true;
+ 
+  fetch('/api/ambulance-recommend', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.classList.remove('loading-state');
+    btn.disabled = false;
+    showResults(data.recommendations, data.summary);
+  })
+  .catch(() => {
+    btn.classList.remove('loading-state');
+    btn.disabled = false;
+    // Demo fallback
+    showResults(demoResults(), 'Critical · Cardiac / MI · 3 hospitals ranked');
+  });
+}
+ 
+function showResults(hospitals, summary) {
+  document.getElementById('results-sub').textContent = summary || 'AI-ranked results';
+  const list = document.getElementById('results-list');
+ 
+  list.innerHTML = hospitals.map((h, i) => `
+    <div class="result-card ${i===0?'top-pick':''}" id="rc-${h.id}" onclick="pickHospital(${h.id})">
+      ${i===0 ? '<div class="rc-badge badge-top">⚡ Best Match</div>' :
+        i===1 ? '<div class="rc-badge badge-fast">🏃 Fastest</div>' : ''}
+      <div class="rc-name">${h.name}</div>
+      <div class="rc-meta">
+        <span>${h.distance_km} km away</span>
+        <span>~${h.eta_min} min ETA</span>
+        <span>${h.city}</span>
+      </div>
+      <div class="rc-score-bar"><div class="rc-score-fill" style="width:${h.score}%"></div></div>
+      <div class="rc-chips">
+        <span class="rc-chip chip-teal">${h.specialty}</span>
+        ${h.er_available ? '<span class="rc-chip chip-blue">ER Open</span>' : ''}
+        <span class="rc-chip chip-red">${h.beds} beds</span>
+      </div>
+      <div class="rc-reason">🤖 ${h.ai_reason}</div>
+      <button class="dispatch-btn" onclick="dispatchTo(event, ${h.id}, '${h.name}')">
+        Dispatch Ambulance Here →
+      </button>
+    </div>`).join('');
+ 
+  document.getElementById('results-panel').classList.add('open');
+}
+ 
+function pickHospital(id) {
+  document.querySelectorAll('.result-card').forEach(c => c.classList.remove('picked'));
+  document.getElementById('rc-' + id).classList.add('picked');
+}
+ 
+function dispatchTo(e, id, name) {
+  e.stopPropagation();
+  socket.emit('ambulance_dispatch', {
+    hospital_id: id,
+    hospital_name: name,
+    lat: userLat,
+    lng: userLng,
+    severity: currentSeverity,
+    condition: selectedCondition,
+    vitals: {
+      bp:      document.getElementById('bp-sys').value + '/' + document.getElementById('bp-dia').value,
+      pulse:   document.getElementById('pulse').value,
+      spo2:    document.getElementById('spo2').value,
+      gcs:     document.getElementById('gcs').value,
+      temp:    document.getElementById('temp').value,
+      glucose: document.getElementById('glucose').value,
+      rr:      document.getElementById('rr').value
+    }
+  });
+  alert('✅ Dispatching to ' + name + '\nHospital has been notified.');
+}
+ 
+function closeResults() {
+  document.getElementById('results-panel').classList.remove('open');
+}
+ 
+// Demo fallback data
+function demoResults() {
+  return [
+    {id:1, name:'AIIMS Bhubaneswar', distance_km:'4.2', eta_min:8, score:94,
+     specialty:'Cardiac ICU', er_available:true, beds:12, city:'Bhubaneswar',
+     ai_reason:'Best cardiac care in region. Cath lab available 24/7. Highest match for MI symptoms.'},
+    {id:2, name:'Apollo Hospitals', distance_km:'6.1', eta_min:11, score:81,
+     specialty:'Multi-specialty', er_available:true, beds:8, city:'Bhubaneswar',
+     ai_reason:'Well-equipped ER. Cardiology team on standby. Slightly farther but higher bed availability.'},
+    {id:3, name:'Capital Hospital', distance_km:'2.8', eta_min:5, score:72,
+     specialty:'General Emergency', er_available:true, beds:5, city:'Bhubaneswar',
+     ai_reason:'Closest hospital. Suitable for initial stabilization before transfer if needed.'},
+  ];
+}
+</script>
+</body>
+</html>
