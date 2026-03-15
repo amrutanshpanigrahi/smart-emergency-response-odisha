@@ -1,6 +1,6 @@
 # 🚑 Smart Emergency Response Odisha
 
-An intelligent ambulance dispatch and hospital routing system for Odisha, built with Python, Flask, MySQL, Machine Learning (K-Means), and real-time WebSocket communication.
+An intelligent ambulance dispatch and hospital routing system for Odisha, built with Python, Flask, MySQL, Machine Learning (K-Means + weighted scoring), and real-time WebSocket communication.
 
 ---
 
@@ -14,6 +14,52 @@ An intelligent ambulance dispatch and hospital routing system for Odisha, built 
 - **Hospital Pre-Alert Dashboard** — Hospital is notified before ambulance arrives
 - **Prep Checklist** — ER team can tick off preparation tasks in real time
 - **Zone Map** — Full Odisha hospital zone map with AI recommender panel
+- **🆕 Ambulance Doctor Panel** — On-site doctor enters live vitals; ML model recommends the best capable hospital in real time
+
+---
+
+## 🩺 Ambulance Doctor Panel (New)
+
+A dedicated tablet interface for the attending doctor or paramedic inside the ambulance. After assessing the patient on-site, the doctor enters vitals and the ML engine instantly recommends the nearest capable hospital.
+
+### Vitals captured
+- Blood Pressure (systolic / diastolic)
+- Pulse / Heart Rate
+- SpO₂ (oxygen saturation)
+- GCS Score (Glasgow Coma Scale)
+- Temperature
+- Blood Glucose
+- Respiratory Rate
+- Physical Injury Description (free text)
+
+### Auto-severity detection
+The UI automatically classifies severity as **Critical / Serious / Stable** based on entered vitals using clinical thresholds (SpO₂, GCS, pulse, BP, RR, glucose) — the doctor can override manually.
+
+### ML Scoring Engine
+Hospitals are ranked using a weighted scoring formula:
+
+```
+score = specialty_match  × 0.35
+      + distance_score   × 0.25
+      + bed_availability × 0.15
+      + capability_match × 0.15   (trauma / neuro / burns / obstetric)
+      + severity_urgency × 0.10
+      + vital_bonuses              (SpO₂ < 90 → ICU boost, GCS ≤ 8 → neuro boost)
+```
+
+### Condition → Specialty mapping
+| Condition | Preferred Specialty |
+|-----------|-------------------|
+| Cardiac / MI | Cardiac ICU, Multi-specialty |
+| Stroke / Neuro | Neuro & Spine, Multi-specialty |
+| Trauma / Accident | Trauma & Burns, Ortho & Trauma |
+| Burns | Trauma & Burns |
+| Respiratory | Multi-specialty, General Emergency |
+| Obstetric | Multi-specialty, General Emergency |
+| Poisoning / OD | General Emergency, Multi-specialty |
+
+### Real-time hospital notification
+When the doctor dispatches, the hospital dashboard is instantly notified via SocketIO with the patient's vitals summary, condition, severity, and ETA.
 
 ---
 
@@ -34,7 +80,7 @@ Uses **scikit-learn K-Means (k=4)** clustering on:
 
 ---
 
-## 🤖 AI Recommendation Engine
+## 🤖 AI Recommendation Engine (Patient App)
 
 Scores each hospital using a weighted formula:
 ```
@@ -72,7 +118,7 @@ Weights shift based on severity:
 | Backend | Python 3.11 + Flask 3.0 |
 | Real-time | Flask-SocketIO + eventlet |
 | Database | MySQL 8.0 |
-| Machine Learning | scikit-learn (K-Means), pandas, numpy |
+| Machine Learning | scikit-learn (K-Means + weighted scoring), pandas, numpy |
 | Maps | Leaflet.js + OpenStreetMap (free, no API key) |
 | Frontend | HTML5 + CSS3 + Vanilla JavaScript |
 | Distance | Haversine formula (pure Python) |
@@ -80,6 +126,7 @@ Weights shift based on severity:
 ---
 
 ## 📁 Project Structure
+
 ```
 smart-emergency-response-odisha/
 ├── app/
@@ -89,7 +136,8 @@ smart-emergency-response-odisha/
 │       ├── patient.py
 │       ├── driver.py
 │       ├── hospital.py
-│       └── ml_api.py
+│       ├── ml_api.py
+│       └── ambulance.py          ← new
 ├── ml/
 │   └── zone_classifier.py
 ├── data/
@@ -98,7 +146,8 @@ smart-emergency-response-odisha/
 │   ├── patient.html
 │   ├── driver.html
 │   ├── hospital.html
-│   └── zone_map.html
+│   ├── zone_map.html
+│   └── ambulance.html            ← new
 ├── schema.sql
 ├── seed_hospitals.py
 ├── run.py
@@ -111,7 +160,7 @@ smart-emergency-response-odisha/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/RudraNarayan2005/smart-emergency-response-odisha.git
+git clone https://github.com/amrutanshpanigrahi/smart-emergency-response-odisha.git
 cd smart-emergency-response-odisha
 ```
 
@@ -152,29 +201,40 @@ python run.py
 | `http://localhost:5000/driver` | Driver tablet |
 | `http://localhost:5000/hospital` | Hospital dashboard |
 | `http://localhost:5000/zone-map` | Odisha ML zone map |
+| `http://localhost:5000/ambulance` | 🆕 Ambulance doctor panel |
 
 ---
 
 ## 📡 Real-Time Flow
+
 ```
 Patient confirms hospital
         ↓
-Flask emits → driver:   new_incident   (patient + hospital info)
-Flask emits → hospital: hospital_alert (patient + ETA + AI note)
+Flask emits → driver:   new_incident      (patient + hospital info)
+Flask emits → hospital: hospital_alert    (patient + ETA + AI note)
         ↓
 Driver pushes GPS every 5s
         ↓
-Flask broadcasts → patient:  ambulance_location (live ETA)
-Flask broadcasts → hospital: ambulance_location (map update)
+Flask broadcasts → patient:  ambulance_location  (live ETA)
+Flask broadcasts → hospital: ambulance_location  (map update)
+
+── NEW ──────────────────────────────────────────────────────────
+Doctor enters vitals on /ambulance
+        ↓
+ML engine scores all hospitals → returns ranked list
+        ↓
+Doctor taps Dispatch
+        ↓
+Flask emits → hospital: ambulance_vitals_update  (vitals + ETA)
 ```
 
 ---
 
 ## 📸 Screenshots
 
-| Patient App | Driver Tablet | Hospital Dashboard |
-|-------------|---------------|-------------------|
-| SOS → Hospital Picker → Live Tracking | Live map + patient info | Pre-alert + prep checklist + zone stats |
+| Patient App | Driver Tablet | Hospital Dashboard | Doctor Panel |
+|-------------|---------------|-------------------|--------------|
+| SOS → Hospital Picker → Live Tracking | Live map + patient info | Pre-alert + prep checklist + zone stats | Vitals entry → ML hospital ranking → dispatch |
 
 ---
 
