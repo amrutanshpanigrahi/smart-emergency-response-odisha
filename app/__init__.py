@@ -17,14 +17,16 @@ def create_app():
     CORS(app)
     socketio.init_app(app)
 
-    from app.routes.patient  import patient_bp
-    from app.routes.driver   import driver_bp
-    from app.routes.hospital import hospital_bp
-    from app.routes.ml_api   import ml_bp
+    from app.routes.patient   import patient_bp
+    from app.routes.driver    import driver_bp
+    from app.routes.hospital  import hospital_bp
+    from app.routes.ml_api    import ml_bp
+    from app.routes.ambulance import ambulance_bp
 
     app.register_blueprint(patient_bp)
     app.register_blueprint(driver_bp)
     app.register_blueprint(hospital_bp)
     app.register_blueprint(ml_bp)
+    app.register_blueprint(ambulance_bp)
 
     return app
