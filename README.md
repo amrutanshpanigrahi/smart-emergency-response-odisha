@@ -181,7 +181,7 @@ Flask broadcasts → hospital: ambulance_location (map update)
 ## 👨‍💻 Developer
 
 **Rudra Narayan**
-- GitHub → [@RudraNarayan2005](https://github.com/RudraNarayan2005)
+- GitHub → [amrutanshpanigrahi](https://github.com/amrutanshpanigrahi)
 
 ---
 
