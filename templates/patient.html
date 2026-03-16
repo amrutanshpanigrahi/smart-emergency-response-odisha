@@ -11,11 +11,56 @@
   .screen{display:none;min-height:100vh;flex-direction:column}
   .screen.active{display:flex}
 
+  /* ── Role Selection Screen ───────────────────────────────── */
+  #role-screen{
+    background:linear-gradient(160deg,#0a0e1a 0%,#1a1a2e 60%,#0f3460 100%);
+    align-items:center;justify-content:center;text-align:center;padding:40px 24px
+  }
+  .role-logo{
+    width:64px;height:64px;border-radius:20px;
+    background:rgba(226,75,74,0.15);border:2px solid rgba(226,75,74,0.4);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 20px
+  }
+  .role-title{color:#fff;font-size:22px;font-weight:700;margin-bottom:6px}
+  .role-sub{color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:40px;line-height:1.6}
+
+  .role-cards{display:flex;flex-direction:column;gap:14px;width:100%;max-width:340px}
+  .role-card{
+    background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.12);
+    border-radius:18px;padding:20px 18px;cursor:pointer;
+    display:flex;align-items:center;gap:16px;text-align:left;
+    transition:all .2s
+  }
+  .role-card:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.25);transform:translateY(-2px)}
+  .role-card:active{transform:scale(0.98)}
+  .role-card-icon{
+    width:48px;height:48px;border-radius:14px;display:flex;
+    align-items:center;justify-content:center;flex-shrink:0;font-size:22px
+  }
+  .icon-patient{background:rgba(226,75,74,0.2);border:1px solid rgba(226,75,74,0.4)}
+  .icon-doctor{background:rgba(0,212,170,0.15);border:1px solid rgba(0,212,170,0.3)}
+  .role-card-title{font-size:15px;font-weight:700;color:#fff;margin-bottom:4px}
+  .role-card-desc{font-size:12px;color:rgba(255,255,255,0.5);line-height:1.4}
+  .role-card-arrow{margin-left:auto;color:rgba(255,255,255,0.3);font-size:18px;flex-shrink:0}
+
+  .role-card.card-patient{border-color:rgba(226,75,74,0.35)}
+  .role-card.card-patient:hover{border-color:#E24B4A;background:rgba(226,75,74,0.1)}
+  .role-card.card-doctor{border-color:rgba(0,212,170,0.3)}
+  .role-card.card-doctor:hover{border-color:#00d4aa;background:rgba(0,212,170,0.08)}
+
+  .role-footer{margin-top:32px;font-size:11px;color:rgba(255,255,255,0.25)}
+
   /* ── SOS Screen ─────────────────────────────────────────── */
   #sos-screen{
     background:linear-gradient(160deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%);
     align-items:center;justify-content:center;text-align:center;padding:40px 20px
   }
+  .back-link{
+    position:absolute;top:20px;left:20px;
+    color:rgba(255,255,255,0.5);font-size:13px;cursor:pointer;
+    display:flex;align-items:center;gap:6px
+  }
+  .back-link:hover{color:#fff}
   .sos-title{color:#fff;font-size:22px;font-weight:600;margin-bottom:6px}
   .sos-sub{color:rgba(255,255,255,0.6);font-size:14px;margin-bottom:36px}
   .sos-btn{
@@ -143,8 +188,57 @@
 </head>
 <body>
 
+<!-- ═══ SCREEN 0: ROLE SELECTION ══════════════════════════════ -->
+<div id="role-screen" class="screen active">
+  <div class="role-logo">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <path d="M16 4L20 13H28L22 18L24.5 28L16 23L7.5 28L10 18L4 13H12L16 4Z" fill="#E24B4A"/>
+    </svg>
+  </div>
+  <div class="role-title">IERN Emergency Response</div>
+  <div class="role-sub">Odisha · AI-powered ambulance network<br>Who are you?</div>
+
+  <div class="role-cards">
+
+    <div class="role-card card-patient" onclick="goPatient()">
+      <div class="role-card-icon icon-patient">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="8" r="4" stroke="#E24B4A" stroke-width="1.8"/>
+          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#E24B4A" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="role-card-title">I am a Patient</div>
+        <div class="role-card-desc">Need emergency help. Tap SOS to call an ambulance to my location.</div>
+      </div>
+      <div class="role-card-arrow">›</div>
+    </div>
+
+    <div class="role-card card-doctor" onclick="goDoctor()">
+      <div class="role-card-icon icon-doctor">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <rect x="7" y="3" width="10" height="14" rx="2" stroke="#00d4aa" stroke-width="1.8"/>
+          <path d="M12 7v6M9 10h6" stroke="#00d4aa" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M5 21c0-3 3-5 7-5s7 2 7 5" stroke="#00d4aa" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="role-card-title">I am a Doctor / Paramedic</div>
+        <div class="role-card-desc">On scene with patient. Enter vitals, get ML hospital recommendation.</div>
+      </div>
+      <div class="role-card-arrow">›</div>
+    </div>
+
+  </div>
+
+  <div class="role-footer">IERN · Intelligent Emergency Response Network · Odisha</div>
+</div>
+
 <!-- ═══ SCREEN 1: SOS ══════════════════════════════════════════ -->
-<div id="sos-screen" class="screen active">
+<div id="sos-screen" class="screen">
+  <div class="back-link" onclick="showScreen('role-screen')">
+    ‹ Back
+  </div>
   <div class="sos-title">IERN Emergency Response</div>
   <div class="sos-sub">Odisha · AI-powered ambulance network</div>
   <button class="sos-btn" onclick="startEmergency()">SOS</button>
@@ -243,16 +337,23 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-// ── State ──────────────────────────────────────────────────────
 let userLat = 20.2961, userLng = 85.8245;
 let selectedHospital = null;
 let allHospitals = [];
 let map, userMarker, ambMarker, hospitalMarker;
 
-// ── Helpers ────────────────────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+}
+
+// ── Role selection ─────────────────────────────────────────────
+function goPatient() {
+  showScreen("sos-screen");
+}
+
+function goDoctor() {
+  window.location.href = "/ambulance";
 }
 
 // ── SOS button ─────────────────────────────────────────────────
@@ -294,7 +395,6 @@ function updateSeverityBadge(sev) {
   b.className   = "severity-badge sev-" + sev;
 }
 
-// ── Fetch AI recommendations from Flask ───────────────────────
 function fetchRecommendations(symptom, severity) {
   document.getElementById("hospital-list").innerHTML =
     '<div style="text-align:center;padding:40px;color:#888">AI is ranking hospitals...</div>';
@@ -316,7 +416,6 @@ function fetchRecommendations(symptom, severity) {
   });
 }
 
-// ── Zone filter chips ──────────────────────────────────────────
 function buildZoneFilter(hospitals) {
   const zones = {};
   hospitals.forEach(h => {
@@ -351,7 +450,6 @@ function filterZone(zid, el) {
   renderHospitalList(filtered);
 }
 
-// ── Render hospital cards ──────────────────────────────────────
 function renderHospitalList(hospitals) {
   const list = document.getElementById("hospital-list");
   if (!hospitals.length) {
@@ -361,20 +459,17 @@ function renderHospitalList(hospitals) {
 
   list.innerHTML = hospitals.map((h, i) => `
     <div class="hospital-card" id="hc-${h.id}" onclick="selectHospital(${h.id})">
-
       ${i === 0 ? `<div style="margin-bottom:8px">
         <span style="background:${h.ai_badge.color};color:#fff;font-size:11px;
           font-weight:600;padding:3px 10px;border-radius:20px">
           ${h.ai_badge.label}
         </span>
       </div>` : ""}
-
       <div class="hc-top">
         <div class="zone-dot" style="background:${h.zone_color}"></div>
         <div class="hc-name">${h.name}</div>
         <div class="hc-dist">${h.distance_km} km</div>
       </div>
-
       <div class="hc-meta">
         <span class="chip chip-green">${h.specialty}</span>
         <span class="chip ${h.er_available ? 'chip-green' : 'chip-gray'}">
@@ -383,7 +478,6 @@ function renderHospitalList(hospitals) {
         <span class="chip chip-blue">${h.beds} beds</span>
         <span class="chip chip-amber">${h.zone_name.split("–")[0].trim()}</span>
       </div>
-
       <div class="hc-ai">
         <svg width="14" height="14" viewBox="0 0 14 14" style="flex-shrink:0;margin-top:1px">
           <circle cx="7" cy="7" r="6" fill="none" stroke="#185FA5" stroke-width="1"/>
@@ -391,7 +485,6 @@ function renderHospitalList(hospitals) {
         </svg>
         <span>${h.ai_reason}</span>
       </div>
-
       <div style="display:flex;align-items:center">
         <span class="hc-stars">
           ${"★".repeat(Math.round(h.rating))}${"☆".repeat(5 - Math.round(h.rating))}
@@ -401,11 +494,9 @@ function renderHospitalList(hospitals) {
           ${h.city}, ${h.district}
         </span>
       </div>
-
     </div>`).join("");
 }
 
-// ── Select hospital ────────────────────────────────────────────
 function selectHospital(id) {
   document.querySelectorAll(".hospital-card").forEach(c => c.classList.remove("selected"));
   document.getElementById("hc-" + id).classList.add("selected");
@@ -415,7 +506,6 @@ function selectHospital(id) {
   btn.textContent = "Confirm " + selectedHospital.name;
 }
 
-// ── Confirm hospital → call ambulance ─────────────────────────
 function confirmHospital() {
   if (!selectedHospital) return;
 
@@ -442,7 +532,6 @@ function confirmHospital() {
   showTrackingScreen();
 }
 
-// ── Tracking screen ────────────────────────────────────────────
 function showTrackingScreen() {
   showScreen("tracking-screen");
   document.getElementById("dest-hospital-name").textContent = selectedHospital.name;
@@ -481,7 +570,7 @@ function initMap() {
 
 function simulateAmbulance() {
   let step = 0;
-  const total   = 12;
+  const total    = 12;
   const startLat = userLat - 0.03;
   const startLng = userLng - 0.02;
 
@@ -509,10 +598,10 @@ function initTimeline() {
   const fmt = d => d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
 
   tl.innerHTML = [
-    {label: "Emergency call placed",                        time: fmt(now),                              state: "done"},
-    {label: selectedHospital.name + " selected by you",    time: fmt(now),                              state: "done"},
-    {label: "Ambulance dispatched",                        time: fmt(now),                              state: "active"},
-    {label: "Arriving at hospital",                        time: "~" + fmt(new Date(Date.now()+840000)),state: "pending"},
+    {label: "Emergency call placed",                     time: fmt(now),                               state: "done"},
+    {label: selectedHospital.name + " selected by you", time: fmt(now),                               state: "done"},
+    {label: "Ambulance dispatched",                      time: fmt(now),                               state: "active"},
+    {label: "Arriving at hospital",                      time: "~" + fmt(new Date(Date.now()+840000)), state: "pending"},
   ].map(e => `
     <div class="tl-item">
       <div class="tl-dot tl-dot-${e.state}"></div>
@@ -534,7 +623,6 @@ function addTimelineEvent(label, time, state) {
     </div>`;
 }
 
-// ── Detect location on page load ───────────────────────────────
 window.onload = () => {
   navigator.geolocation?.getCurrentPosition(pos => {
     userLat = pos.coords.latitude;
