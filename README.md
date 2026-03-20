@@ -240,7 +240,7 @@ Flask emits → hospital: ambulance_vitals_update  (vitals + ETA)
 
 ## 👨‍💻 Developer
 
-**Rudra Narayan**
+**Amrutansh Panigrahi**
 - GitHub → [amrutanshpanigrahi](https://github.com/amrutanshpanigrahi)
 
 ---
