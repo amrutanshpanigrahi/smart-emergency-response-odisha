@@ -3,357 +3,454 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IERN – Ambulance Doctor Panel</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<title>IERN · Ambulance Doctor Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=Lora:ital,wght@0,600;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;
-  --accent:#00d4aa;--accent2:#3b82f6;--danger:#ef4444;--warn:#f59e0b;
-  --text:#e2e8f0;--muted:#64748b;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif
+:root {
+  --white:       #ffffff;
+  --snow:        #f7f9fc;
+  --fog:         #eef1f7;
+  --line:        #dfe3ec;
+  --mist:        #bec6d4;
+  --dim:         #7e8fa8;
+  --body:        #3a4558;
+  --ink:         #181d2a;
+  --red:         #d93025;
+  --red-light:   #fff1f0;
+  --red-mid:     rgba(217,48,37,0.10);
+  --red-border:  rgba(217,48,37,0.22);
+  --teal:        #0d7377;
+  --teal-light:  #edf7f7;
+  --teal-mid:    rgba(13,115,119,0.10);
+  --teal-border: rgba(13,115,119,0.22);
+  --amber:       #b45309;
+  --amber-light: #fffbeb;
+  --amber-mid:   rgba(180,83,9,0.10);
+  --amber-border:rgba(180,83,9,0.22);
+  --green:       #166534;
+  --green-light: #f0fdf4;
+  --green-mid:   rgba(22,101,52,0.10);
+  --green-border:rgba(22,101,52,0.2);
+  --mono:        'DM Mono', monospace;
+  --sans:        'DM Sans', sans-serif;
+  --syne:        'Syne', sans-serif;
+  --lora:        'Lora', serif;
+  --radius:      13px;
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.05);
+  --shadow-md:   0 4px 16px rgba(0,0,0,0.07);
 }
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; background:var(--snow); color:var(--ink); font-family:var(--sans); -webkit-font-smoothing:antialiased; }
 
-/* ── Screens ── */
-.screen{display:none;min-height:100vh;flex-direction:column}
-.screen.active{display:flex}
+.screen { display:none; min-height:100vh; flex-direction:column; }
+.screen.active { display:flex; animation:slide-in 0.22s ease; }
+@keyframes slide-in { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
 
 /* ── Header ── */
-.header{
-  background:var(--surface);border-bottom:1px solid var(--border);
-  padding:14px 20px;display:flex;align-items:center;gap:12px;
-  position:sticky;top:0;z-index:100
+.header {
+  background:var(--white); border-bottom:1px solid var(--line);
+  padding:13px 18px; display:flex; align-items:center; gap:12px;
+  position:sticky; top:0; z-index:100; box-shadow:var(--shadow-sm);
 }
-.header-icon{
-  width:36px;height:36px;border-radius:8px;background:rgba(239,68,68,0.15);
-  border:1px solid rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center
+.header-cross { position:relative; width:18px; height:18px; flex-shrink:0; }
+.header-cross::before, .header-cross::after {
+  content:''; position:absolute; background:var(--red); border-radius:2px;
 }
-.header-title{font-size:15px;font-weight:600;letter-spacing:0.02em}
-.header-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:1px}
-.live-dot{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--accent);font-family:var(--mono)}
-.live-dot::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blink 1.5s infinite}
-@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(0,212,170,0.4)}50%{opacity:.8;box-shadow:0 0 0 6px rgba(0,212,170,0)}}
+.header-cross::before { width:6px; height:18px; left:6px; top:0; }
+.header-cross::after  { width:18px; height:6px; left:0; top:6px; }
+.header-title { font-size:14px; font-weight:600; color:var(--ink); }
+.header-sub   { font-size:11px; color:var(--dim); margin-top:1px; }
+.live-badge {
+  margin-left:auto; display:flex; align-items:center; gap:5px;
+  font-size:10px; color:var(--teal); font-family:var(--mono);
+  background:var(--teal-light); border:1px solid var(--teal-border);
+  padding:4px 10px; border-radius:20px;
+}
+.live-dot { width:6px; height:6px; border-radius:50%; background:var(--teal); animation:pulse-dot 1.8s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+.back-btn {
+  width:32px; height:32px; border-radius:9px; border:1px solid var(--line);
+  background:var(--white); display:flex; align-items:center;
+  justify-content:center; cursor:pointer; transition:all 0.15s; flex-shrink:0;
+}
+.back-btn:hover { background:var(--fog); }
 
-.back-btn{
-  width:32px;height:32px;border-radius:8px;background:var(--surface2);
-  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer
-}
-
-/* ── GPS bar ── */
-.gps-bar{
-  background:rgba(59,130,246,0.08);border-bottom:1px solid rgba(59,130,246,0.15);
-  padding:9px 20px;display:flex;align-items:center;gap:8px;
-  font-size:12px;color:#93c5fd;font-family:var(--mono)
-}
-
-/* ══ SCREEN 1: SCENE ARRIVAL ══ */
-#scene-screen{
-  background:linear-gradient(160deg,#0a0e1a 0%,#0f1f35 60%,#0a1628 100%);
-  align-items:center;justify-content:center;text-align:center;padding:40px 24px
-}
-.scene-badge{
-  background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);
-  border-radius:20px;padding:6px 16px;font-size:11px;font-weight:600;
-  color:#f87171;font-family:var(--mono);letter-spacing:0.08em;margin-bottom:24px;
-  display:inline-flex;align-items:center;gap:6px
-}
-.scene-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:#ef4444;animation:blink 1.5s infinite}
-.scene-title{font-size:24px;font-weight:600;color:#fff;margin-bottom:8px;line-height:1.3}
-.scene-sub{font-size:14px;color:var(--muted);margin-bottom:40px;line-height:1.6}
-
-.scene-options{display:flex;flex-direction:column;gap:12px;width:100%;max-width:340px}
-.scene-btn{
-  width:100%;padding:18px 20px;border-radius:16px;border:1.5px solid;
-  cursor:pointer;font-family:var(--sans);font-size:14px;font-weight:600;
-  display:flex;align-items:center;gap:14px;text-align:left;transition:all .2s
-}
-.scene-btn-primary{
-  background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.4);color:#fca5a5
-}
-.scene-btn-primary:hover{background:rgba(239,68,68,0.2);border-color:#ef4444}
-.scene-btn-secondary{
-  background:rgba(0,212,170,0.08);border-color:rgba(0,212,170,0.3);color:#6ee7d4
-}
-.scene-btn-secondary:hover{background:rgba(0,212,170,0.15);border-color:var(--accent)}
-.scene-btn-icon{
-  width:40px;height:40px;border-radius:10px;display:flex;align-items:center;
-  justify-content:center;flex-shrink:0;font-size:18px
-}
-.icon-red{background:rgba(239,68,68,0.15)}
-.icon-teal{background:rgba(0,212,170,0.12)}
-.btn-label{font-size:14px;font-weight:600;margin-bottom:2px}
-.btn-desc{font-size:11px;font-weight:400;opacity:.7;line-height:1.3}
-
-.gps-pill{
-  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
-  border-radius:20px;padding:8px 16px;color:rgba(255,255,255,0.6);
-  font-size:12px;margin-top:32px;font-family:var(--mono)
+/* ── GPS strip ── */
+.gps-strip {
+  background:var(--teal-light); border-bottom:1px solid var(--teal-border);
+  padding:8px 18px; display:flex; align-items:center; gap:8px;
+  font-size:11px; color:var(--teal); font-family:var(--mono);
 }
 
-/* ══ SCREEN 2: PATIENT INFO (quick intake) ══ */
-#intake-screen{background:var(--bg)}
-.intake-form{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
-.field-label{font-size:11px;color:var(--muted);font-family:var(--mono);letter-spacing:.06em;margin-bottom:5px}
-.field-input{
-  width:100%;background:var(--surface);border:1px solid var(--border);
-  border-radius:10px;padding:11px 14px;color:var(--text);font-family:var(--sans);
-  font-size:14px;outline:none;transition:border-color .2s
+/* ── Sections ── */
+.form-section { padding:16px 18px 0; }
+.sec-label {
+  font-size:10px; font-weight:700; color:var(--dim);
+  letter-spacing:0.1em; text-transform:uppercase; margin-bottom:12px;
+  display:flex; align-items:center; gap:8px;
 }
-.field-input:focus{border-color:var(--accent2)}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.skip-btn{
-  background:transparent;border:1px solid var(--border);border-radius:10px;
-  padding:11px;color:var(--muted);font-size:13px;cursor:pointer;margin-top:4px
+.sec-label::after { content:''; flex:1; height:1px; background:var(--line); }
+
+/* ── Field ── */
+.field-label {
+  font-size:10px; font-weight:700; color:var(--dim);
+  letter-spacing:0.07em; text-transform:uppercase; margin-bottom:6px;
 }
-.next-btn{
-  width:100%;padding:15px;border-radius:12px;border:none;cursor:pointer;
-  background:linear-gradient(135deg,#00d4aa,#3b82f6);color:#fff;
-  font-size:14px;font-weight:600;font-family:var(--sans);margin-top:8px
+.field-input {
+  width:100%; background:var(--white); border:1px solid var(--line);
+  border-radius:10px; padding:11px 14px; color:var(--ink);
+  font-family:var(--sans); font-size:14px; outline:none; transition:border-color 0.15s;
+  box-shadow:var(--shadow-sm);
+}
+.field-input:focus { border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-mid); }
+.field-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+/* ── Vitals Grid ── */
+.vitals-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:4px; }
+.vital-card {
+  background:var(--white); border:1px solid var(--line);
+  border-radius:var(--radius); padding:13px 14px; transition:border-color 0.15s;
+  box-shadow:var(--shadow-sm);
+}
+.vital-card:focus-within { border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-mid); }
+.vital-card.full { grid-column:1/-1; }
+.vital-top {
+  display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;
+}
+.vital-lbl  { font-size:10px; font-weight:700; color:var(--dim); letter-spacing:0.06em; text-transform:uppercase; }
+.vital-unit { font-size:10px; color:var(--teal); font-family:var(--mono); font-weight:500; }
+.vital-input {
+  width:100%; background:transparent; border:none; outline:none;
+  font-family:var(--mono); font-size:26px; font-weight:500; color:var(--ink);
+  caret-color:var(--teal);
+}
+.vital-input::placeholder { color:var(--mist); }
+.vital-range { font-size:10px; color:var(--mist); margin-top:5px; }
+
+/* BP row */
+.bp-row { display:flex; align-items:center; gap:10px; }
+.bp-input {
+  flex:1; background:transparent; border:none; outline:none;
+  font-family:var(--mono); font-size:30px; font-weight:500; color:var(--ink);
+  caret-color:var(--teal);
+}
+.bp-input::placeholder { color:var(--mist); }
+.bp-sep { font-size:30px; color:var(--mist); font-weight:300; line-height:1; }
+
+/* ── Severity Selector ── */
+.severity-row { display:flex; gap:8px; padding:10px 18px; }
+.sev-opt {
+  flex:1; padding:11px 8px; border-radius:10px; border:1.5px solid var(--line);
+  text-align:center; font-size:12px; font-weight:600; cursor:pointer;
+  transition:all 0.15s; color:var(--dim); background:var(--white);
+  box-shadow:var(--shadow-sm);
+}
+.sev-opt:hover { border-color:var(--mist); }
+.sev-critical { border-color:var(--red-border)!important;   background:var(--red-light)!important;   color:var(--red)!important; }
+.sev-serious  { border-color:var(--amber-border)!important; background:var(--amber-light)!important; color:var(--amber)!important; }
+.sev-stable   { border-color:var(--green-border)!important; background:var(--green-light)!important; color:var(--green)!important; }
+
+/* ── Condition Chips ── */
+.condition-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.cond-chip {
+  padding:11px 12px; border-radius:10px; border:1.5px solid var(--line);
+  background:var(--white); font-size:12px; font-weight:500; cursor:pointer;
+  transition:all 0.15s; display:flex; align-items:center; gap:8px;
+  color:var(--body); box-shadow:var(--shadow-sm);
+}
+.cond-chip:hover   { border-color:var(--mist); background:var(--fog); }
+.cond-chip.selected { border-color:var(--teal); background:var(--teal-light); color:var(--ink); }
+.cond-icon { width:8px; height:8px; border-radius:50%; background:currentColor; flex-shrink:0; }
+
+/* ── Injury Textarea ── */
+.injury-box {
+  width:100%; background:var(--white); border:1px solid var(--line);
+  border-radius:var(--radius); padding:12px 14px; color:var(--ink);
+  font-family:var(--sans); font-size:13px; resize:none; outline:none;
+  transition:border-color 0.15s; line-height:1.55;
+  box-shadow:var(--shadow-sm);
+}
+.injury-box:focus { border-color:var(--teal); box-shadow:0 0 0 3px var(--teal-mid); }
+.injury-box::placeholder { color:var(--mist); }
+
+/* ── AI Hint ── */
+.ai-hint {
+  margin:14px 18px;
+  background:var(--teal-light); border:1px solid var(--teal-border);
+  border-left:3px solid var(--teal);
+  border-radius:var(--radius); padding:12px 14px;
+  display:flex; align-items:flex-start; gap:10px;
+}
+.ai-hint-icon {
+  width:30px; height:30px; border-radius:8px; flex-shrink:0;
+  background:var(--teal-mid); border:1px solid var(--teal-border);
+  display:flex; align-items:center; justify-content:center;
+}
+.ai-hint-text { font-size:12px; color:var(--body); line-height:1.5; }
+.ai-hint-text strong { color:var(--teal); font-weight:600; }
+
+/* ── Submit ── */
+.submit-wrap { padding:14px 18px 36px; }
+.submit-btn {
+  width:100%; padding:16px; border-radius:13px; border:none; cursor:pointer;
+  font-family:var(--syne); font-size:15px; font-weight:700;
+  background:var(--teal); color:var(--white); transition:all 0.2s;
+  box-shadow:0 4px 18px rgba(13,115,119,0.25);
+}
+.submit-btn:hover:not(:disabled) { background:#0a5f63; }
+.submit-btn:disabled { background:var(--mist); cursor:not-allowed; box-shadow:none; }
+.submit-btn .loading-inner { display:none; align-items:center; justify-content:center; gap:8px; }
+.submit-btn.loading-state .label { display:none; }
+.submit-btn.loading-state .loading-inner { display:flex; }
+
+/* ── Results Screen ── */
+#results-screen { background:var(--snow); }
+
+.results-list { padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
+
+/* Vitals summary bar */
+.vitals-summary {
+  background:var(--white); border:1px solid var(--line); border-radius:var(--radius);
+  padding:13px 16px; margin:12px 18px 0; box-shadow:var(--shadow-sm);
+}
+.vs-title { font-size:10px; font-weight:700; color:var(--dim); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:10px; }
+.vs-grid  { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.vs-item  { text-align:center; background:var(--fog); border-radius:8px; padding:8px; }
+.vs-val   { font-size:15px; font-weight:600; font-family:var(--mono); color:var(--ink); }
+.vs-val.ok     { color:var(--teal); }
+.vs-val.warn   { color:var(--amber); }
+.vs-val.danger { color:var(--red); }
+.vs-key   { font-size:9px; color:var(--dim); margin-top:3px; letter-spacing:0.04em; text-transform:uppercase; }
+
+/* Result card */
+.result-card {
+  background:var(--white); border:1.5px solid var(--line); border-radius:var(--radius);
+  padding:15px 16px; cursor:pointer; transition:all 0.18s;
+  box-shadow:var(--shadow-sm);
+}
+.result-card:hover { border-color:var(--teal); box-shadow:var(--shadow-md); transform:translateY(-1px); }
+.result-card.top-pick { border-color:rgba(13,115,119,0.4); }
+.result-card.picked   { border-color:var(--teal); background:var(--teal-light); }
+
+.rc-badge {
+  display:inline-flex; align-items:center; gap:5px; padding:3px 10px;
+  border-radius:20px; font-size:10px; font-weight:700;
+  margin-bottom:10px; letter-spacing:0.04em;
+}
+.badge-best  { background:var(--teal-light); color:var(--teal); border:1px solid var(--teal-border); }
+.badge-fast  { background:var(--amber-light); color:var(--amber); border:1px solid var(--amber-border); }
+
+.rc-name { font-size:15px; font-weight:700; color:var(--ink); margin-bottom:4px; }
+.rc-meta {
+  display:flex; gap:10px; font-size:11px; color:var(--dim);
+  font-family:var(--mono); margin-bottom:10px;
+}
+.rc-bar  { height:3px; background:var(--fog); border-radius:2px; margin-bottom:10px; }
+.rc-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,var(--teal),#1d9e75); }
+.rc-chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+.rc-chip  { padding:3px 9px; border-radius:7px; font-size:10px; font-weight:600; }
+.chip-teal  { background:var(--teal-light); color:var(--teal); }
+.chip-blue  { background:#eff6ff; color:#1d4ed8; }
+.chip-amber { background:var(--amber-light); color:var(--amber); }
+.rc-reason {
+  font-size:12px; color:var(--body); background:var(--fog); border-radius:8px;
+  padding:9px 11px; line-height:1.55; border-left:3px solid var(--teal);
+  margin-bottom:10px;
 }
 
-/* ══ SCREEN 3: VITALS ══ */
-#vitals-screen{background:var(--bg)}
+.dispatch-btn {
+  width:100%; padding:13px; border-radius:10px; border:none; cursor:pointer;
+  font-size:13px; font-weight:700; background:var(--teal); color:var(--white);
+  transition:all 0.15s; font-family:var(--syne);
+  box-shadow:0 3px 10px rgba(13,115,119,0.2);
+}
+.dispatch-btn:hover { background:#0a5f63; }
+.dispatch-btn:active { transform:scale(0.98); }
 
-.section{padding:14px 20px 0}
-.section-label{
-  font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px
-}
-.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+/* ── Tracking Screen ── */
+#tracking-screen { background:var(--snow); }
+#amb-map { height:260px; width:100%; }
 
-.vitals-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
-.vital-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:12px;padding:12px 14px;transition:border-color .2s
-}
-.vital-card:focus-within{border-color:var(--accent2)}
-.vital-label{font-size:10px;color:var(--muted);font-family:var(--mono);margin-bottom:6px;display:flex;justify-content:space-between}
-.vital-unit{color:var(--accent);font-size:10px}
-.vital-input{
-  width:100%;background:transparent;border:none;outline:none;
-  font-family:var(--mono);font-size:22px;font-weight:600;color:var(--text);caret-color:var(--accent)
-}
-.vital-input::placeholder{color:var(--border);font-size:20px}
-.vital-range{font-size:9px;color:var(--muted);margin-top:4px}
-.vital-card.full{grid-column:1/-1}
-.bp-row{display:flex;align-items:center;gap:8px}
-.bp-input{
-  flex:1;background:transparent;border:none;outline:none;
-  font-family:var(--mono);font-size:26px;font-weight:600;color:var(--text);caret-color:var(--accent)
-}
-.bp-sep{font-size:26px;color:var(--muted);font-weight:300}
+.tracking-body { padding:18px 18px 40px; }
+.eta-row { display:flex; align-items:baseline; gap:7px; margin-bottom:4px; }
+.eta-big  { font-family:var(--syne); font-size:52px; font-weight:800; color:var(--ink); line-height:1; }
+.eta-unit { font-size:16px; color:var(--dim); }
+.eta-dest { font-size:13px; color:var(--dim); margin-bottom:16px; }
 
-/* severity */
-.severity-row{display:flex;gap:8px;padding:10px 20px}
-.sev-opt{
-  flex:1;padding:10px 8px;border-radius:10px;border:1.5px solid var(--border);
-  text-align:center;font-size:12px;font-weight:600;cursor:pointer;
-  transition:all .15s;color:var(--muted);background:var(--surface)
+.hosp-chip {
+  background:var(--white); border:1px solid var(--teal-border);
+  border-radius:10px; padding:11px 14px; font-size:13px; color:var(--ink);
+  margin-bottom:14px; display:flex; align-items:center; gap:9px;
+  box-shadow:var(--shadow-sm);
 }
-.sev-opt.active-critical{border-color:#ef4444;background:rgba(239,68,68,.12);color:#ef4444}
-.sev-opt.active-serious{border-color:#f59e0b;background:rgba(245,158,11,.12);color:#f59e0b}
-.sev-opt.active-stable{border-color:#00d4aa;background:rgba(0,212,170,.12);color:#00d4aa}
+.hosp-chip-name { font-weight:600; }
+.hosp-eta-note  { margin-left:auto; font-size:11px; color:var(--teal); font-family:var(--mono); font-weight:500; }
 
-/* condition */
-.condition-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
-.cond-chip{
-  padding:10px 12px;border-radius:10px;border:1px solid var(--border);
-  background:var(--surface);font-size:12px;font-weight:500;cursor:pointer;
-  transition:all .15s;display:flex;align-items:center;gap:8px;color:var(--muted)
+.vitals-summary-track {
+  background:var(--white); border:1px solid var(--line); border-radius:var(--radius);
+  padding:13px 16px; margin-bottom:16px; box-shadow:var(--shadow-sm);
 }
-.cond-chip.selected{border-color:var(--accent2);background:rgba(59,130,246,.1);color:var(--text)}
-.cond-dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
 
-/* injury */
-.injury-box{
-  width:100%;background:var(--surface);border:1px solid var(--border);
-  border-radius:12px;padding:12px 14px;color:var(--text);font-family:var(--sans);
-  font-size:13px;resize:none;outline:none;transition:border-color .2s;line-height:1.5
-}
-.injury-box:focus{border-color:var(--accent2)}
-.injury-box::placeholder{color:var(--muted)}
+.timeline { border-top:1px solid var(--line); padding-top:16px; }
+.tl-row { display:flex; gap:12px; padding:5px 0; }
+.tl-node { width:11px; height:11px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+.tl-done    { background:var(--teal); }
+.tl-active  { background:var(--red); box-shadow:0 0 0 3px rgba(217,48,37,0.18); }
+.tl-waiting { background:var(--line); border:1.5px solid var(--mist); }
+.tl-text    { font-size:13px; font-weight:500; color:var(--ink); }
+.tl-stamp   { font-size:10px; color:var(--dim); font-family:var(--mono); margin-top:2px; }
 
-/* ai status */
-.ai-status{
-  margin:14px 20px;background:var(--surface2);border:1px solid var(--border);
-  border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px
+/* ── Scene Screen ── */
+#scene-screen {
+  background:var(--white);
+  align-items:center; justify-content:center;
+  text-align:center; padding:48px 28px;
+  position:relative;
 }
-.ai-icon{
-  width:32px;height:32px;border-radius:8px;background:rgba(0,212,170,.1);
-  border:1px solid rgba(0,212,170,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0
+#scene-screen::before {
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 50% 100%, rgba(13,115,119,0.06) 0%, transparent 70%);
 }
-.ai-text{font-size:12px;color:var(--muted);line-height:1.4}
-.ai-text strong{color:var(--accent);font-weight:600}
+.scene-badge {
+  display:inline-flex; align-items:center; gap:7px;
+  background:var(--red-light); border:1px solid var(--red-border);
+  border-radius:24px; padding:6px 16px;
+  font-size:10px; font-weight:700; color:var(--red);
+  font-family:var(--mono); letter-spacing:0.08em; margin-bottom:26px;
+}
+.scene-badge-dot { width:6px; height:6px; border-radius:50%; background:var(--red); animation:pulse-dot 1.5s infinite; }
+.scene-heading {
+  font-family:var(--lora); font-size:26px; color:var(--ink);
+  margin-bottom:8px; line-height:1.25;
+}
+.scene-sub { font-size:13px; color:var(--dim); margin-bottom:44px; line-height:1.65; }
 
-/* submit */
-.submit-wrap{padding:14px 20px 32px}
-.submit-btn{
-  width:100%;padding:16px;border-radius:14px;border:none;cursor:pointer;
-  font-family:var(--sans);font-size:15px;font-weight:600;
-  background:linear-gradient(135deg,#00d4aa,#3b82f6);color:#fff;transition:all .2s
+.scene-options { display:flex; flex-direction:column; gap:12px; width:100%; max-width:320px; }
+.scene-btn {
+  width:100%; padding:18px 16px; border-radius:var(--radius); border:1.5px solid var(--line);
+  cursor:pointer; font-family:var(--sans); font-size:13px; font-weight:600;
+  display:flex; align-items:center; gap:14px; text-align:left;
+  background:var(--white); transition:all 0.2s; box-shadow:var(--shadow-sm);
 }
-.submit-btn:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed}
-.submit-btn .loading{display:none;align-items:center;justify-content:center;gap:8px}
-.submit-btn.loading-state .label{display:none}
-.submit-btn.loading-state .loading{display:flex}
+.scene-btn:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+.scene-btn-red:hover  { border-color:var(--red);  background:var(--red-light); }
+.scene-btn-teal:hover { border-color:var(--teal); background:var(--teal-light); }
+.scene-icon {
+  width:42px; height:42px; border-radius:11px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:20px;
+}
+.icon-red  { background:var(--red-mid);  border:1px solid var(--red-border); }
+.icon-teal { background:var(--teal-mid); border:1px solid var(--teal-border); }
+.btn-label { font-size:13px; font-weight:600; color:var(--ink); margin-bottom:3px; }
+.btn-desc  { font-size:11px; color:var(--dim); font-weight:400; line-height:1.4; }
 
-/* ══ SCREEN 4: RESULTS ══ */
-#results-screen{background:var(--bg)}
-.results-list{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
-.result-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:14px;padding:14px 16px;cursor:pointer;transition:all .2s
+.gps-pill {
+  margin-top:36px; padding:9px 20px; border-radius:24px;
+  background:var(--fog); border:1px solid var(--line);
+  font-size:11px; color:var(--dim); font-family:var(--mono);
+  display:inline-flex; align-items:center; gap:6px;
 }
-.result-card.top-pick{border-color:rgba(59,130,246,.5)}
-.result-card.picked{border-color:var(--accent);background:rgba(0,212,170,.05)}
-.rc-badge{
-  display:inline-flex;align-items:center;gap:5px;padding:3px 10px;
-  border-radius:20px;font-size:10px;font-weight:700;margin-bottom:10px;
-  letter-spacing:.05em;text-transform:uppercase
-}
-.badge-top{background:rgba(59,130,246,.15);color:#60a5fa}
-.badge-fast{background:rgba(0,212,170,.15);color:var(--accent)}
-.rc-name{font-size:15px;font-weight:600;margin-bottom:4px}
-.rc-meta{display:flex;gap:10px;font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:10px}
-.rc-score-bar{height:4px;border-radius:2px;background:var(--border);margin-bottom:8px}
-.rc-score-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
-.rc-reason{font-size:12px;color:#93c5fd;background:rgba(59,130,246,.08);border-radius:8px;padding:8px 10px;line-height:1.5}
-.rc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.rc-chip{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600}
-.chip-teal{background:rgba(0,212,170,.12);color:var(--accent)}
-.chip-blue{background:rgba(59,130,246,.12);color:#60a5fa}
-.chip-red{background:rgba(239,68,68,.12);color:#f87171}
-.dispatch-btn{
-  width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;
-  font-size:14px;font-weight:600;background:var(--accent);color:#0a0e1a;margin-top:8px;transition:all .15s
-}
-.dispatch-btn:active{transform:scale(.98)}
+.gps-dot { width:6px; height:6px; border-radius:50%; background:var(--teal); }
 
-/* ══ SCREEN 5: TRACKING ══ */
-#tracking-screen{background:var(--bg)}
-#amb-map{height:260px;width:100%}
-.tracking-card{padding:16px 20px}
-.eta-row{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
-.eta-num{font-size:36px;font-weight:700;color:#fff}
-.eta-unit{font-size:16px;color:var(--muted)}
-.eta-dest{font-size:13px;color:var(--muted);margin-bottom:14px}
-.vitals-summary{
-  background:var(--surface);border:1px solid var(--border);border-radius:12px;
-  padding:12px 14px;margin-bottom:12px
+/* ── Intake Form ── */
+.intake-form { padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+.skip-btn {
+  background:transparent; border:1px solid var(--line); border-radius:10px;
+  padding:11px; color:var(--dim); font-size:13px; cursor:pointer; font-family:var(--sans);
+  transition:all 0.15s;
 }
-.vs-title{font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:8px;letter-spacing:.06em}
-.vs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.vs-item{text-align:center}
-.vs-val{font-size:16px;font-weight:600;font-family:var(--mono);color:var(--text)}
-.vs-val.warn{color:var(--warn)}
-.vs-val.danger{color:var(--danger)}
-.vs-val.ok{color:var(--accent)}
-.vs-key{font-size:9px;color:var(--muted);margin-top:2px}
-.hospital-chip{
-  background:rgba(0,212,170,.1);border:1px solid rgba(0,212,170,.2);
-  border-radius:10px;padding:10px 14px;font-size:13px;color:#6ee7d4;
-  margin-bottom:12px;display:flex;align-items:center;gap:8px
+.skip-btn:hover { background:var(--fog); }
+.next-btn {
+  width:100%; padding:15px; border-radius:12px; border:none; cursor:pointer;
+  background:var(--teal); color:var(--white); font-size:14px; font-weight:700;
+  font-family:var(--syne); box-shadow:0 4px 16px rgba(13,115,119,0.22); transition:all 0.15s;
 }
-.status-timeline{border-top:1px solid var(--border);padding-top:14px;margin-top:4px}
-.tl-item{display:flex;gap:12px;padding:6px 0}
-.tl-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;margin-top:3px}
-.tl-done{background:var(--accent)}
-.tl-active{background:var(--accent2);box-shadow:0 0 0 4px rgba(59,130,246,.25)}
-.tl-pending{background:var(--border)}
-.tl-label{font-size:13px;font-weight:500}
-.tl-time{font-size:11px;color:var(--muted)}
+.next-btn:hover { background:#0a5f63; }
 
-/* spinner */
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+/* Spinner */
+@keyframes spin { to{transform:rotate(360deg)} }
+.spinner { width:16px; height:16px; border:2px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; }
 
-/* slide-up animation */
-@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-.slide-up{animation:slideUp .3s ease}
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:var(--fog); }
+::-webkit-scrollbar-thumb { background:var(--mist); border-radius:4px; }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════════
+<!-- ══════════════════════════════════
      SCREEN 1 — SCENE ARRIVAL
-══════════════════════════════════════════════════ -->
+══════════════════════════════════ -->
 <div id="scene-screen" class="screen active">
-  <div class="scene-badge">AMBULANCE ON SCENE</div>
-  <div class="scene-title">Patient Assessment<br>Required</div>
+  <div class="scene-badge"><div class="scene-badge-dot"></div>AMBULANCE ON SCENE</div>
+  <div class="scene-heading">Patient Assessment<br>Required</div>
   <div class="scene-sub">Doctor / Paramedic: assess the patient<br>and choose how to proceed below</div>
 
   <div class="scene-options">
-
-    <button class="scene-btn scene-btn-primary" onclick="goToIntake('emergency')">
-      <div class="scene-btn-icon icon-red">🚨</div>
+    <button class="scene-btn scene-btn-red" onclick="goToIntake('emergency')">
+      <div class="scene-icon icon-red">🚨</div>
       <div>
         <div class="btn-label">Emergency — Assess &amp; Route</div>
-        <div class="btn-desc">Patient unconscious / critical / unknown condition. Enter vitals, get AI hospital recommendation.</div>
+        <div class="btn-desc">Patient critical or unknown condition. Enter vitals, get AI hospital recommendation.</div>
       </div>
     </button>
-
-    <button class="scene-btn scene-btn-secondary" onclick="goToIntake('sos')">
-      <div class="scene-btn-icon icon-teal">📱</div>
+    <button class="scene-btn scene-btn-teal" onclick="goToIntake('sos')">
+      <div class="scene-icon icon-teal">📱</div>
       <div>
         <div class="btn-label">Patient Sent SOS</div>
-        <div class="btn-desc">Patient already picked a hospital via app. Confirm and proceed to that hospital.</div>
+        <div class="btn-desc">Patient already picked a hospital via app. Confirm and proceed.</div>
       </div>
     </button>
-
   </div>
 
-  <div class="gps-pill" id="scene-gps">Acquiring GPS location...</div>
+  <div class="gps-pill" id="scene-gps"><div class="gps-dot"></div>Acquiring GPS location...</div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     SCREEN 2 — QUICK PATIENT INTAKE
-══════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════
+     SCREEN 2 — PATIENT INTAKE
+══════════════════════════════════ -->
 <div id="intake-screen" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('scene-screen')">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="#7e8fa8" stroke-width="1.5" stroke-linecap="round"/></svg>
     </div>
     <div>
       <div class="header-title">Patient Details</div>
       <div class="header-sub">Quick intake — can be filled later</div>
     </div>
-    <div class="live-dot">LIVE</div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
   </div>
 
   <div class="intake-form">
     <div>
-      <div class="field-label">PATIENT NAME</div>
+      <div class="field-label">Patient Name</div>
       <input class="field-input" id="p-name" type="text" placeholder="Unknown / enter if available">
     </div>
     <div class="field-row">
       <div>
-        <div class="field-label">AGE</div>
+        <div class="field-label">Age</div>
         <input class="field-input" id="p-age" type="number" placeholder="~35">
       </div>
       <div>
-        <div class="field-label">GENDER</div>
+        <div class="field-label">Gender</div>
         <select class="field-input" id="p-gender">
           <option value="">Unknown</option>
-          <option>Male</option>
-          <option>Female</option>
-          <option>Other</option>
+          <option>Male</option><option>Female</option><option>Other</option>
         </select>
       </div>
     </div>
     <div class="field-row">
       <div>
-        <div class="field-label">BLOOD GROUP</div>
+        <div class="field-label">Blood Group</div>
         <select class="field-input" id="p-blood">
           <option value="">Unknown</option>
-          <option>A+</option><option>A−</option>
-          <option>B+</option><option>B−</option>
-          <option>O+</option><option>O−</option>
-          <option>AB+</option><option>AB−</option>
+          <option>A+</option><option>A−</option><option>B+</option><option>B−</option>
+          <option>O+</option><option>O−</option><option>AB+</option><option>AB−</option>
         </select>
       </div>
       <div>
-        <div class="field-label">CONSCIOUSNESS</div>
+        <div class="field-label">Consciousness</div>
         <select class="field-input" id="p-conscious">
           <option value="conscious">Conscious</option>
           <option value="semiconscious">Semi-conscious</option>
@@ -362,42 +459,44 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       </div>
     </div>
     <div>
-      <div class="field-label">KNOWN MEDICAL HISTORY (optional)</div>
+      <div class="field-label">Medical History (optional)</div>
       <input class="field-input" id="p-history" type="text" placeholder="Diabetes, hypertension, cardiac...">
     </div>
-
     <button class="next-btn" onclick="goToVitals()">Continue to Vitals →</button>
     <button class="skip-btn" onclick="goToVitals()">Skip — go straight to vitals</button>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     SCREEN 3 — VITALS + CONDITION
-══════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════
+     SCREEN 3 — VITALS & CONDITION
+══════════════════════════════════ -->
 <div id="vitals-screen" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('intake-screen')">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="#7e8fa8" stroke-width="1.5" stroke-linecap="round"/></svg>
     </div>
     <div>
       <div class="header-title">Vitals &amp; Assessment</div>
       <div class="header-sub">Enter what you can measure on scene</div>
     </div>
-    <div class="live-dot">LIVE</div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
   </div>
 
-  <div class="gps-bar">
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#93c5fd" stroke-width="1"/><circle cx="6" cy="6" r="2" fill="#93c5fd"/></svg>
+  <div class="gps-strip">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="#0d7377" stroke-width="1.2"/><circle cx="6" cy="6" r="2" fill="#0d7377"/></svg>
     <span id="vitals-gps">Acquiring GPS...</span>
   </div>
 
   <!-- Vitals -->
-  <div class="section">
-    <div class="section-label">Patient Vitals</div>
+  <div class="form-section">
+    <div class="sec-label">Patient Vitals</div>
     <div class="vitals-grid">
 
       <div class="vital-card full">
-        <div class="vital-label">Blood Pressure <span class="vital-unit">mmHg</span></div>
+        <div class="vital-top">
+          <div class="vital-lbl">Blood Pressure</div>
+          <div class="vital-unit">mmHg</div>
+        </div>
         <div class="bp-row">
           <input class="bp-input" id="bp-sys" type="number" placeholder="120" min="50" max="250" oninput="autoSeverity()">
           <span class="bp-sep">/</span>
@@ -407,37 +506,37 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       </div>
 
       <div class="vital-card">
-        <div class="vital-label">Pulse <span class="vital-unit">bpm</span></div>
+        <div class="vital-top"><div class="vital-lbl">Pulse</div><div class="vital-unit">bpm</div></div>
         <input class="vital-input" id="pulse" type="number" placeholder="72" min="20" max="250" oninput="autoSeverity()">
         <div class="vital-range">Normal: 60–100</div>
       </div>
 
       <div class="vital-card">
-        <div class="vital-label">SpO₂ <span class="vital-unit">%</span></div>
+        <div class="vital-top"><div class="vital-lbl">SpO₂</div><div class="vital-unit">%</div></div>
         <input class="vital-input" id="spo2" type="number" placeholder="98" min="50" max="100" oninput="autoSeverity()">
         <div class="vital-range">Normal: ≥95</div>
       </div>
 
       <div class="vital-card">
-        <div class="vital-label">Temperature <span class="vital-unit">°C</span></div>
+        <div class="vital-top"><div class="vital-lbl">Temperature</div><div class="vital-unit">°C</div></div>
         <input class="vital-input" id="temp" type="number" placeholder="37.0" min="30" max="42" step="0.1">
         <div class="vital-range">Normal: 36.5–37.5</div>
       </div>
 
       <div class="vital-card">
-        <div class="vital-label">Blood Glucose <span class="vital-unit">mg/dL</span></div>
+        <div class="vital-top"><div class="vital-lbl">Blood Glucose</div><div class="vital-unit">mg/dL</div></div>
         <input class="vital-input" id="glucose" type="number" placeholder="100" min="20" max="600" oninput="autoSeverity()">
         <div class="vital-range">Normal: 70–140</div>
       </div>
 
       <div class="vital-card">
-        <div class="vital-label">GCS Score <span class="vital-unit">/15</span></div>
+        <div class="vital-top"><div class="vital-lbl">GCS Score</div><div class="vital-unit">/15</div></div>
         <input class="vital-input" id="gcs" type="number" placeholder="15" min="3" max="15" oninput="autoSeverity()">
         <div class="vital-range">Critical: ≤8</div>
       </div>
 
       <div class="vital-card full">
-        <div class="vital-label">Respiratory Rate <span class="vital-unit">breaths/min</span></div>
+        <div class="vital-top"><div class="vital-lbl">Respiratory Rate</div><div class="vital-unit">breaths/min</div></div>
         <input class="vital-input" id="rr" type="number" placeholder="16" min="4" max="60" oninput="autoSeverity()">
         <div class="vital-range">Normal: 12–20</div>
       </div>
@@ -445,9 +544,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 
-  <!-- Auto severity -->
-  <div class="section" style="margin-top:6px">
-    <div class="section-label">Assessed Severity</div>
+  <!-- Severity -->
+  <div class="form-section" style="margin-top:6px">
+    <div class="sec-label">Assessed Severity</div>
   </div>
   <div class="severity-row">
     <div class="sev-opt" id="sev-critical" onclick="setSeverity('critical')">🔴 Critical</div>
@@ -456,36 +555,36 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   </div>
 
   <!-- Condition -->
-  <div class="section">
-    <div class="section-label">Primary Condition</div>
+  <div class="form-section">
+    <div class="sec-label">Primary Condition</div>
     <div class="condition-grid">
-      <div class="cond-chip" data-val="cardiac"     onclick="selectCond(this)"><span class="cond-dot" style="color:#ef4444"></span>Cardiac / MI</div>
-      <div class="cond-chip" data-val="stroke"      onclick="selectCond(this)"><span class="cond-dot" style="color:#a78bfa"></span>Stroke / Neuro</div>
-      <div class="cond-chip" data-val="trauma"      onclick="selectCond(this)"><span class="cond-dot" style="color:#f59e0b"></span>Trauma / Accident</div>
-      <div class="cond-chip" data-val="respiratory" onclick="selectCond(this)"><span class="cond-dot" style="color:#60a5fa"></span>Respiratory</div>
-      <div class="cond-chip" data-val="burns"       onclick="selectCond(this)"><span class="cond-dot" style="color:#fb923c"></span>Burns</div>
-      <div class="cond-chip" data-val="obstetric"   onclick="selectCond(this)"><span class="cond-dot" style="color:#f472b6"></span>Obstetric</div>
-      <div class="cond-chip" data-val="poisoning"   onclick="selectCond(this)"><span class="cond-dot" style="color:#4ade80"></span>Poisoning / OD</div>
-      <div class="cond-chip" data-val="general"     onclick="selectCond(this)"><span class="cond-dot" style="color:#94a3b8"></span>General / Other</div>
+      <div class="cond-chip" data-val="cardiac"     onclick="selectCond(this)"><span class="cond-icon" style="color:#d93025"></span>Cardiac / MI</div>
+      <div class="cond-chip" data-val="stroke"      onclick="selectCond(this)"><span class="cond-icon" style="color:#7c3aed"></span>Stroke / Neuro</div>
+      <div class="cond-chip" data-val="trauma"      onclick="selectCond(this)"><span class="cond-icon" style="color:#b45309"></span>Trauma / Accident</div>
+      <div class="cond-chip" data-val="respiratory" onclick="selectCond(this)"><span class="cond-icon" style="color:#1d4ed8"></span>Respiratory</div>
+      <div class="cond-chip" data-val="burns"       onclick="selectCond(this)"><span class="cond-icon" style="color:#c2410c"></span>Burns</div>
+      <div class="cond-chip" data-val="obstetric"   onclick="selectCond(this)"><span class="cond-icon" style="color:#be185d"></span>Obstetric</div>
+      <div class="cond-chip" data-val="poisoning"   onclick="selectCond(this)"><span class="cond-icon" style="color:#166534"></span>Poisoning / OD</div>
+      <div class="cond-chip" data-val="general"     onclick="selectCond(this)"><span class="cond-icon" style="color:#7e8fa8"></span>General / Other</div>
     </div>
   </div>
 
   <!-- Physical injury -->
-  <div class="section" style="margin-top:6px">
-    <div class="section-label">Physical Injury Description</div>
+  <div class="form-section" style="margin-top:8px">
+    <div class="sec-label">Physical Injury Description</div>
     <textarea class="injury-box" id="injury" rows="3"
       placeholder="Visible injuries, wounds, fractures, burns, bleeding sites..."></textarea>
   </div>
 
   <!-- AI hint -->
-  <div class="ai-status">
-    <div class="ai-icon">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <rect x="2" y="2" width="12" height="12" rx="3" stroke="#00d4aa" stroke-width="1.2"/>
-        <path d="M5 8h6M8 5v6" stroke="#00d4aa" stroke-width="1.2" stroke-linecap="round"/>
+  <div class="ai-hint">
+    <div class="ai-hint-icon">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <rect x="1.5" y="1.5" width="12" height="12" rx="3" stroke="#0d7377" stroke-width="1.3"/>
+        <path d="M4.5 7.5h6M7.5 4.5v6" stroke="#0d7377" stroke-width="1.3" stroke-linecap="round"/>
       </svg>
     </div>
-    <div class="ai-text" id="ai-hint-text">
+    <div class="ai-hint-text" id="ai-hint-text">
       <strong>ML Model Ready</strong> — Fill vitals to auto-detect severity and get hospital recommendations ranked by specialty, distance &amp; ER capacity
     </div>
   </div>
@@ -493,18 +592,18 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
   <div class="submit-wrap">
     <button class="submit-btn" id="submit-btn" onclick="getRecommendations()">
       <span class="label">Get AI Hospital Recommendations →</span>
-      <span class="loading"><span class="spinner"></span> Analyzing vitals...</span>
+      <span class="loading-inner"><span class="spinner"></span> Analysing vitals...</span>
     </button>
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     SCREEN 4 — HOSPITAL RESULTS
-══════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════
+     SCREEN 4 — RESULTS
+══════════════════════════════════ -->
 <div id="results-screen" class="screen">
   <div class="header">
     <div class="back-btn" onclick="showScreen('vitals-screen')">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="#e2e8f0" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="#7e8fa8" stroke-width="1.5" stroke-linecap="round"/></svg>
     </div>
     <div>
       <div class="header-title">Hospital Recommendations</div>
@@ -512,143 +611,110 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
     </div>
   </div>
 
-  <!-- Vitals summary bar -->
-  <div class="vitals-summary" style="margin:12px 20px 0">
-    <div class="vs-title">VITALS ON SCENE</div>
+  <div class="vitals-summary">
+    <div class="vs-title">Vitals on Scene</div>
     <div class="vs-grid" id="vitals-summary-grid"></div>
   </div>
 
   <div class="results-list" id="results-list"></div>
 </div>
 
-<!-- ══════════════════════════════════════════════════
-     SCREEN 5 — LIVE TRACKING TO HOSPITAL
-══════════════════════════════════════════════════ -->
+<!-- ══════════════════════════════════
+     SCREEN 5 — TRACKING
+══════════════════════════════════ -->
 <div id="tracking-screen" class="screen">
   <div class="header">
     <div>
       <div class="header-title">En Route to Hospital</div>
       <div class="header-sub" id="tracking-hospital-name">--</div>
     </div>
-    <div class="live-dot">LIVE</div>
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
   </div>
 
   <div id="amb-map"></div>
 
-  <div class="tracking-card">
+  <div class="tracking-body">
     <div class="eta-row">
-      <span class="eta-num" id="eta-num">--</span>
+      <span class="eta-big" id="eta-num">--</span>
       <span class="eta-unit">min</span>
     </div>
     <div class="eta-dest" id="eta-dest">Ambulance dispatched</div>
 
-    <div class="hospital-chip">
-      <svg width="14" height="14" viewBox="0 0 14 14">
-        <rect x="3" y="1" width="8" height="12" rx="1" fill="none" stroke="#0F6E56" stroke-width="1.2"/>
-        <line x1="7" y1="1" x2="7" y2="13" stroke="#0F6E56" stroke-width=".8"/>
-        <line x1="3" y1="7" x2="11" y2="7" stroke="#0F6E56" stroke-width=".8"/>
+    <div class="hosp-chip">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <rect x="3" y="1" width="8" height="12" rx="1.5" fill="none" stroke="#0d7377" stroke-width="1.3"/>
+        <line x1="7" y1="1" x2="7" y2="13" stroke="#0d7377" stroke-width=".8"/>
+        <line x1="3" y1="7" x2="11" y2="7" stroke="#0d7377" stroke-width=".8"/>
       </svg>
-      <span id="tracking-hospital-chip">--</span>
-      <span style="margin-left:auto;font-size:11px;color:var(--accent)" id="tracking-eta-total">--</span>
+      <span class="hosp-chip-name" id="tracking-hospital-chip">--</span>
+      <span class="hosp-eta-note" id="tracking-eta-total">--</span>
     </div>
 
-    <!-- Vitals summary on tracking screen -->
-    <div class="vitals-summary">
-      <div class="vs-title">PATIENT VITALS</div>
+    <div class="vitals-summary-track">
+      <div class="vs-title">Patient Vitals</div>
       <div class="vs-grid" id="tracking-vitals-grid"></div>
     </div>
 
-    <div class="status-timeline" id="status-timeline"></div>
+    <div class="timeline" id="status-timeline"></div>
   </div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-// ── State ────────────────────────────────────────────────────
-let userLat = 20.2961, userLng = 85.8245;
-let currentSeverity = null;
-let selectedCondition = null;
-let selectedHospital = null;
-let allResults = [];
-let map, ambMarker, hospitalMarker;
+let userLat=20.2961, userLng=85.8245;
+let currentSeverity=null, selectedCondition=null, selectedHospital=null, allResults=[];
+let map=null, ambMarker=null, hospitalMarker=null;
 const socket = io();
 
-// ── GPS ──────────────────────────────────────────────────────
 navigator.geolocation?.getCurrentPosition(pos => {
-  userLat = pos.coords.latitude;
-  userLng = pos.coords.longitude;
-  const txt = 'GPS: ' + userLat.toFixed(4) + ', ' + userLng.toFixed(4);
-  document.getElementById('scene-gps').textContent = txt;
+  userLat = pos.coords.latitude; userLng = pos.coords.longitude;
+  const txt = 'GPS: '+userLat.toFixed(4)+', '+userLng.toFixed(4);
+  document.getElementById('scene-gps').innerHTML = '<div class="gps-dot"></div>'+txt;
   document.getElementById('vitals-gps').textContent = txt;
 }, () => {
-  const txt = 'GPS: Bhubaneswar (default)';
-  document.getElementById('scene-gps').textContent = txt;
-  document.getElementById('vitals-gps').textContent = txt;
+  document.getElementById('scene-gps').innerHTML = '<div class="gps-dot"></div>GPS: Bhubaneswar (default)';
+  document.getElementById('vitals-gps').textContent = 'GPS: Bhubaneswar (default)';
 });
 
-// ── Screen navigation ────────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  const el = document.getElementById(id);
-  el.classList.add('active');
-  el.classList.add('slide-up');
-  setTimeout(() => el.classList.remove('slide-up'), 400);
+  document.getElementById(id).classList.add('active');
 }
 
 function goToIntake(mode) {
   window._mode = mode;
-  if (mode === 'sos') {
-    // Patient already sent SOS — skip straight to tracking
-    alert('Patient has already sent SOS and selected a hospital.\nProceed to that hospital as confirmed.');
-    return;
-  }
+  if (mode === 'sos') { alert('Patient has already sent SOS and selected a hospital.\nProceed to that hospital as confirmed.'); return; }
   showScreen('intake-screen');
 }
 
-function goToVitals() {
-  showScreen('vitals-screen');
-}
+function goToVitals() { showScreen('vitals-screen'); }
 
-// ── Auto severity from vitals ────────────────────────────────
 function autoSeverity() {
-  const pulse   = +document.getElementById('pulse').value;
-  const spo2    = +document.getElementById('spo2').value;
-  const gcs     = +document.getElementById('gcs').value;
-  const sys     = +document.getElementById('bp-sys').value;
-  const rr      = +document.getElementById('rr').value;
-  const glucose = +document.getElementById('glucose').value;
-
-  let score = 0;
-  if (spo2 && spo2 < 90)   score += 3;
-  else if (spo2 && spo2 < 94) score += 1;
-  if (gcs && gcs <= 8)     score += 3;
-  else if (gcs && gcs <= 12) score += 1;
-  if (pulse && (pulse > 140 || pulse < 40)) score += 2;
-  else if (pulse && (pulse > 110 || pulse < 55)) score += 1;
-  if (sys && (sys > 180 || sys < 80)) score += 2;
-  if (rr && (rr > 30 || rr < 8)) score += 2;
-  if (glucose && (glucose > 400 || glucose < 40)) score += 2;
-
-  if (score >= 5)      setSeverity('critical', true);
-  else if (score >= 2) setSeverity('serious', true);
-  else if (pulse || spo2 || gcs) setSeverity('stable', true);
-
-  // Update AI hint
+  const pulse=+document.getElementById('pulse').value, spo2=+document.getElementById('spo2').value;
+  const gcs=+document.getElementById('gcs').value, sys=+document.getElementById('bp-sys').value;
+  const rr=+document.getElementById('rr').value, glucose=+document.getElementById('glucose').value;
+  let score=0;
+  if (spo2&&spo2<90) score+=3; else if (spo2&&spo2<94) score+=1;
+  if (gcs&&gcs<=8) score+=3; else if (gcs&&gcs<=12) score+=1;
+  if (pulse&&(pulse>140||pulse<40)) score+=2; else if (pulse&&(pulse>110||pulse<55)) score+=1;
+  if (sys&&(sys>180||sys<80)) score+=2;
+  if (rr&&(rr>30||rr<8)) score+=2;
+  if (glucose&&(glucose>400||glucose<40)) score+=2;
+  if (score>=5) setSeverity('critical');
+  else if (score>=2) setSeverity('serious');
+  else if (pulse||spo2||gcs) setSeverity('stable');
   const hint = document.getElementById('ai-hint-text');
-  if (score >= 5)
-    hint.innerHTML = '<strong style="color:#ef4444">⚠ Critical vitals detected</strong> — ML will prioritize nearest ICU / trauma centre';
-  else if (score >= 2)
-    hint.innerHTML = '<strong style="color:#f59e0b">Serious condition</strong> — ML balancing speed and specialty match';
-  else if (pulse || spo2)
-    hint.innerHTML = '<strong style="color:#00d4aa">Stable vitals</strong> — ML will optimize for specialty and quality';
+  if (score>=5)       hint.innerHTML = '<strong style="color:var(--red)">⚠ Critical vitals detected</strong> — ML will prioritise nearest ICU / trauma centre';
+  else if (score>=2)  hint.innerHTML = '<strong style="color:var(--amber)">Serious condition</strong> — ML balancing speed and specialty match';
+  else if (pulse||spo2) hint.innerHTML = '<strong style="color:var(--teal)">Stable vitals</strong> — ML will optimise for specialty and quality';
 }
 
 function setSeverity(val) {
   currentSeverity = val;
-  ['critical','serious','stable'].forEach(s => {
-    document.getElementById('sev-' + s).className = 'sev-opt' + (s === val ? ' active-' + s : '');
-  });
+  document.getElementById('sev-critical').className = 'sev-opt'+(val==='critical'?' sev-critical':'');
+  document.getElementById('sev-serious').className  = 'sev-opt'+(val==='serious'?' sev-serious':'');
+  document.getElementById('sev-stable').className   = 'sev-opt'+(val==='stable'?' sev-stable':'');
 }
 
 function selectCond(el) {
@@ -657,66 +723,43 @@ function selectCond(el) {
   selectedCondition = el.dataset.val;
 }
 
-// ── Fetch recommendations ────────────────────────────────────
 function getRecommendations() {
   const payload = {
-    lat: userLat, lng: userLng,
-    bp_sys:    document.getElementById('bp-sys').value || null,
-    bp_dia:    document.getElementById('bp-dia').value || null,
-    pulse:     document.getElementById('pulse').value || null,
-    spo2:      document.getElementById('spo2').value || null,
-    temp:      document.getElementById('temp').value || null,
-    glucose:   document.getElementById('glucose').value || null,
-    gcs:       document.getElementById('gcs').value || null,
-    rr:        document.getElementById('rr').value || null,
-    severity:  currentSeverity || 'serious',
-    condition: selectedCondition || 'general',
-    injury:    document.getElementById('injury').value,
-    patient: {
-      name:      document.getElementById('p-name').value || 'Unknown',
-      age:       document.getElementById('p-age').value || 'Unknown',
-      gender:    document.getElementById('p-gender').value || 'Unknown',
-      blood:     document.getElementById('p-blood').value || 'Unknown',
-      conscious: document.getElementById('p-conscious').value,
-      history:   document.getElementById('p-history').value
+    lat:userLat, lng:userLng,
+    bp_sys:document.getElementById('bp-sys').value||null,
+    bp_dia:document.getElementById('bp-dia').value||null,
+    pulse:document.getElementById('pulse').value||null,
+    spo2:document.getElementById('spo2').value||null,
+    temp:document.getElementById('temp').value||null,
+    glucose:document.getElementById('glucose').value||null,
+    gcs:document.getElementById('gcs').value||null,
+    rr:document.getElementById('rr').value||null,
+    severity:currentSeverity||'serious',
+    condition:selectedCondition||'general',
+    injury:document.getElementById('injury').value,
+    patient:{
+      name:document.getElementById('p-name').value||'Unknown',
+      age:document.getElementById('p-age').value||'Unknown',
+      gender:document.getElementById('p-gender').value||'Unknown',
+      blood:document.getElementById('p-blood').value||'Unknown',
+      conscious:document.getElementById('p-conscious').value,
+      history:document.getElementById('p-history').value,
     }
   };
-
   const btn = document.getElementById('submit-btn');
-  btn.classList.add('loading-state');
-  btn.disabled = true;
-
-  fetch('/api/ambulance-recommend', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(payload)
-  })
-  .then(r => r.json())
-  .then(data => {
-    btn.classList.remove('loading-state');
-    btn.disabled = false;
-    allResults = data.recommendations;
-    showResults(data.recommendations, data.summary, payload);
-  })
-  .catch(() => {
-    btn.classList.remove('loading-state');
-    btn.disabled = false;
-    allResults = demoResults();
-    showResults(allResults, 'Demo mode — server not connected', payload);
-  });
+  btn.classList.add('loading-state'); btn.disabled=true;
+  fetch('/api/ambulance-recommend',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(r=>r.json())
+    .then(data=>{ btn.classList.remove('loading-state'); btn.disabled=false; allResults=data.recommendations; showResults(data.recommendations,data.summary,payload); })
+    .catch(()=>{ btn.classList.remove('loading-state'); btn.disabled=false; allResults=demoResults(); showResults(allResults,'Demo mode — server not connected',payload); });
 }
 
-// ── Show results ─────────────────────────────────────────────
 function showResults(hospitals, summary, payload) {
-  document.getElementById('results-sub').textContent = summary || 'AI-ranked results';
-
-  // Vitals summary
+  document.getElementById('results-sub').textContent = summary||'AI-ranked results';
   buildVitalsSummary('vitals-summary-grid', payload);
-
-  const list = document.getElementById('results-list');
-  list.innerHTML = hospitals.map((h, i) => `
+  document.getElementById('results-list').innerHTML = hospitals.map((h,i) => `
     <div class="result-card ${i===0?'top-pick':''}" id="rc-${h.id}" onclick="pickHospital(${h.id})">
-      ${i===0 ? '<div class="rc-badge badge-top">⚡ Best Match</div>'
+      ${i===0 ? '<div class="rc-badge badge-best">⚡ Best Match</div>'
               : i===1 ? '<div class="rc-badge badge-fast">🏃 Fastest</div>' : ''}
       <div class="rc-name">${h.name}</div>
       <div class="rc-meta">
@@ -724,162 +767,110 @@ function showResults(hospitals, summary, payload) {
         <span>~${h.eta_min} min ETA</span>
         <span>${h.city}</span>
       </div>
-      <div class="rc-score-bar"><div class="rc-score-fill" style="width:${h.score}%"></div></div>
+      <div class="rc-bar"><div class="rc-fill" style="width:${h.score}%"></div></div>
       <div class="rc-chips">
         <span class="rc-chip chip-teal">${h.specialty}</span>
-        ${h.er_available ? '<span class="rc-chip chip-blue">ER Open</span>' : ''}
-        <span class="rc-chip chip-red">${h.beds} beds</span>
+        ${h.er_available?'<span class="rc-chip chip-blue">ER Open</span>':''}
+        <span class="rc-chip chip-amber">${h.beds} beds</span>
       </div>
       <div class="rc-reason">🤖 ${h.ai_reason}</div>
       <button class="dispatch-btn" onclick="dispatchTo(event,${h.id},'${h.name}',${h.lat},${h.lng},${h.eta_min})">
         Dispatch to ${h.name} →
       </button>
     </div>`).join('');
-
   showScreen('results-screen');
 }
 
 function pickHospital(id) {
   document.querySelectorAll('.result-card').forEach(c => c.classList.remove('picked'));
-  document.getElementById('rc-' + id).classList.add('picked');
-  selectedHospital = allResults.find(h => h.id === id);
+  document.getElementById('rc-'+id).classList.add('picked');
+  selectedHospital = allResults.find(h => h.id===id);
 }
 
-// ── Dispatch ─────────────────────────────────────────────────
 function dispatchTo(e, id, name, lat, lng, eta) {
   e.stopPropagation();
-  selectedHospital = allResults.find(h => h.id === id) || {id, name, lat, lng, eta_min: eta};
-
+  selectedHospital = allResults.find(h => h.id===id)||{id,name,lat,lng,eta_min:eta};
   const vitals = {
-    bp:      (document.getElementById('bp-sys').value||'?') + '/' + (document.getElementById('bp-dia').value||'?'),
-    pulse:   document.getElementById('pulse').value   || '?',
-    spo2:    document.getElementById('spo2').value    || '?',
-    gcs:     document.getElementById('gcs').value     || '?',
-    temp:    document.getElementById('temp').value    || '?',
-    glucose: document.getElementById('glucose').value || '?',
-    rr:      document.getElementById('rr').value      || '?',
+    bp:(document.getElementById('bp-sys').value||'?')+'/'+(document.getElementById('bp-dia').value||'?'),
+    pulse:document.getElementById('pulse').value||'?',
+    spo2:document.getElementById('spo2').value||'?',
+    gcs:document.getElementById('gcs').value||'?',
+    temp:document.getElementById('temp').value||'?',
+    glucose:document.getElementById('glucose').value||'?',
+    rr:document.getElementById('rr').value||'?',
   };
-
-  // Emit to hospital dashboard
-  socket.emit('ambulance_dispatch', {
-    hospital_id:   id,
-    hospital_name: name,
-    hospital_lat:  lat,
-    hospital_lng:  lng,
-    lat: userLat, lng: userLng,
-    severity:  currentSeverity,
-    condition: selectedCondition,
-    vitals,
-    patient: {
-      name:      document.getElementById('p-name').value || 'Unknown',
-      age:       document.getElementById('p-age').value  || 'Unknown',
-      gender:    document.getElementById('p-gender').value || 'Unknown',
-      blood:     document.getElementById('p-blood').value  || 'Unknown',
-      conscious: document.getElementById('p-conscious').value,
-      history:   document.getElementById('p-history').value
-    },
-    eta_min: eta,
-    injury:  document.getElementById('injury').value
+  socket.emit('ambulance_dispatch',{
+    hospital_id:id, hospital_name:name, hospital_lat:lat, hospital_lng:lng,
+    lat:userLat, lng:userLng, severity:currentSeverity, condition:selectedCondition,
+    vitals, eta_min:eta, injury:document.getElementById('injury').value,
+    patient:{name:document.getElementById('p-name').value||'Unknown',age:document.getElementById('p-age').value||'Unknown',
+      gender:document.getElementById('p-gender').value||'Unknown',blood:document.getElementById('p-blood').value||'Unknown',
+      conscious:document.getElementById('p-conscious').value,history:document.getElementById('p-history').value}
   });
-
   showTrackingScreen(name, lat, lng, eta, vitals);
 }
 
-// ── Tracking screen ───────────────────────────────────────────
 function showTrackingScreen(hospName, hospLat, hospLng, eta, vitals) {
   document.getElementById('tracking-hospital-name').textContent = hospName;
   document.getElementById('tracking-hospital-chip').textContent = hospName;
-  document.getElementById('tracking-eta-total').textContent = '~' + eta + ' min';
-  document.getElementById('eta-num').textContent = eta;
-  document.getElementById('eta-dest').textContent = 'En route to ' + hospName;
-
-  buildVitalsSummary('tracking-vitals-grid', {
-    bp_sys: document.getElementById('bp-sys').value,
-    spo2:   document.getElementById('spo2').value,
-    pulse:  document.getElementById('pulse').value,
-    gcs:    document.getElementById('gcs').value,
-    temp:   document.getElementById('temp').value,
-    rr:     document.getElementById('rr').value,
+  document.getElementById('tracking-eta-total').textContent     = '~'+eta+' min';
+  document.getElementById('eta-num').textContent                = eta;
+  document.getElementById('eta-dest').textContent               = 'En route to '+hospName;
+  buildVitalsSummary('tracking-vitals-grid',{
+    bp_sys:document.getElementById('bp-sys').value, bp_dia:document.getElementById('bp-dia').value,
+    spo2:document.getElementById('spo2').value, pulse:document.getElementById('pulse').value,
+    gcs:document.getElementById('gcs').value, temp:document.getElementById('temp').value, rr:document.getElementById('rr').value,
   });
-
   buildTimeline(hospName, eta);
   showScreen('tracking-screen');
   setTimeout(() => initMap(hospLat, hospLng, eta), 150);
 }
 
 function initMap(hospLat, hospLng, eta) {
-  if (map) { map.remove(); map = null; }
-  map = L.map('amb-map').setView([userLat, userLng], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {attribution:'© OpenStreetMap'}).addTo(map);
-
-  ambMarker = L.circleMarker([userLat, userLng], {
-    radius:10, color:'#EF9F27', fillColor:'#EF9F27', fillOpacity:1
-  }).addTo(map).bindPopup('Ambulance (you)');
-
-  hospitalMarker = L.circleMarker([hospLat, hospLng], {
-    radius:10, color:'#1D9E75', fillColor:'#1D9E75', fillOpacity:1
-  }).addTo(map).bindPopup('Destination hospital');
-
-  L.polyline([[userLat, userLng],[hospLat, hospLng]],
-    {color:'#3b82f6', dashArray:'8 5', weight:3}).addTo(map);
-
+  if (map) { map.remove(); map=null; }
+  map = L.map('amb-map').setView([userLat,userLng],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(map);
+  ambMarker = L.circleMarker([userLat,userLng],{radius:10,color:'#b45309',fillColor:'#b45309',fillOpacity:1}).addTo(map).bindPopup('Ambulance');
+  hospitalMarker = L.circleMarker([hospLat,hospLng],{radius:10,color:'#0d7377',fillColor:'#0d7377',fillOpacity:1}).addTo(map).bindPopup('Destination');
+  L.polyline([[userLat,userLng],[hospLat,hospLng]],{color:'#0d7377',dashArray:'8 5',weight:3}).addTo(map);
   simulateDrive(hospLat, hospLng, eta);
 }
 
 function simulateDrive(hospLat, hospLng, eta) {
-  const steps = eta * 3;
-  let step = 0;
-  const interval = setInterval(() => {
+  const steps=eta*3; let step=0;
+  const iv = setInterval(() => {
     step++;
-    const t   = step / steps;
-    const lat = userLat + (hospLat - userLat) * t;
-    const lng = userLng + (hospLng - userLng) * t;
-    if (ambMarker) ambMarker.setLatLng([lat, lng]);
-    const rem = Math.max(0, Math.round(eta * (1 - t)));
-    document.getElementById('eta-num').textContent = rem;
-    if (step >= steps) {
-      clearInterval(interval);
-      document.getElementById('eta-dest').textContent = 'Ambulance arrived at hospital';
-      addTlEvent('Arrived at hospital', 'Now', 'done');
-    }
+    const t=step/steps, lat=userLat+(hospLat-userLat)*t, lng=userLng+(hospLng-userLng)*t;
+    if (ambMarker) ambMarker.setLatLng([lat,lng]);
+    document.getElementById('eta-num').textContent = Math.max(0,Math.round(eta*(1-t)));
+    if (step>=steps) { clearInterval(iv); document.getElementById('eta-dest').textContent='Ambulance arrived at hospital'; }
   }, 2000);
 }
 
 function buildTimeline(hospName, eta) {
-  const tl  = document.getElementById('status-timeline');
-  const now = new Date();
-  const fmt = d => d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  const tl=document.getElementById('status-timeline'), now=new Date();
+  const fmt = d => d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   tl.innerHTML = [
-    {label:'Patient assessed on scene',   time:fmt(now),                              state:'done'},
-    {label:'Vitals recorded by doctor',   time:fmt(now),                              state:'done'},
-    {label:'Hospital selected by ML',     time:fmt(now),                              state:'done'},
-    {label:'Ambulance dispatched',        time:fmt(now),                              state:'active'},
-    {label:'Arriving at ' + hospName,     time:'~'+fmt(new Date(Date.now()+eta*60000)), state:'pending'},
+    {text:'Patient assessed on scene', stamp:fmt(now), state:'done'},
+    {text:'Vitals recorded by doctor', stamp:fmt(now), state:'done'},
+    {text:'Hospital selected by ML',   stamp:fmt(now), state:'done'},
+    {text:'Ambulance dispatched',      stamp:fmt(now), state:'active'},
+    {text:'Arriving at '+hospName,     stamp:'~'+fmt(new Date(Date.now()+eta*60000)), state:'waiting'},
   ].map(e => `
-    <div class="tl-item">
-      <div class="tl-dot tl-${e.state}"></div>
-      <div><div class="tl-label">${e.label}</div><div class="tl-time">${e.time}</div></div>
+    <div class="tl-row">
+      <div class="tl-node tl-${e.state}"></div>
+      <div><div class="tl-text">${e.text}</div><div class="tl-stamp">${e.stamp}</div></div>
     </div>`).join('');
 }
 
-function addTlEvent(label, time, state) {
-  document.getElementById('status-timeline').innerHTML += `
-    <div class="tl-item">
-      <div class="tl-dot tl-${state}"></div>
-      <div><div class="tl-label">${label}</div><div class="tl-time">${time}</div></div>
-    </div>`;
-}
-
-// ── Vitals summary builder ────────────────────────────────────
 function buildVitalsSummary(gridId, payload) {
   const items = [
-    {key:'BP',    val: (payload.bp_sys||'?')+'/'+( payload.bp_dia||'?'), warn: payload.bp_sys && (+payload.bp_sys>180||+payload.bp_sys<80)},
-    {key:'SpO₂',  val: payload.spo2  ? payload.spo2+'%'  : '?', danger: payload.spo2  && +payload.spo2<90,  warn: payload.spo2  && +payload.spo2<94},
-    {key:'Pulse', val: payload.pulse ? payload.pulse+' bpm':'?', danger: payload.pulse && (+payload.pulse>140||+payload.pulse<40)},
-    {key:'GCS',   val: payload.gcs   ? payload.gcs+'/15' : '?', danger: payload.gcs   && +payload.gcs<=8,   warn: payload.gcs   && +payload.gcs<=12},
-    {key:'Temp',  val: payload.temp  ? payload.temp+'°C' : '?', warn: payload.temp  && (+payload.temp>38.5||+payload.temp<36)},
-    {key:'RR',    val: payload.rr    ? payload.rr+' /min': '?', warn: payload.rr    && (+payload.rr>25||+payload.rr<10)},
+    {key:'BP',    val:(payload.bp_sys||'?')+'/'+(payload.bp_dia||'?'), warn:payload.bp_sys&&(+payload.bp_sys>180||+payload.bp_sys<80)},
+    {key:'SpO₂',  val:payload.spo2 ?payload.spo2+'%'  :'?', danger:payload.spo2&&+payload.spo2<90, warn:payload.spo2&&+payload.spo2<94},
+    {key:'Pulse', val:payload.pulse?payload.pulse+' bpm':'?', danger:payload.pulse&&(+payload.pulse>140||+payload.pulse<40)},
+    {key:'GCS',   val:payload.gcs  ?payload.gcs+'/15' :'?', danger:payload.gcs&&+payload.gcs<=8,warn:payload.gcs&&+payload.gcs<=12},
+    {key:'Temp',  val:payload.temp ?payload.temp+'°C'  :'?', warn:payload.temp&&(+payload.temp>38.5||+payload.temp<36)},
+    {key:'RR',    val:payload.rr   ?payload.rr+' /min' :'?', warn:payload.rr&&(+payload.rr>25||+payload.rr<10)},
   ];
   document.getElementById(gridId).innerHTML = items.map(i => `
     <div class="vs-item">
@@ -888,12 +879,11 @@ function buildVitalsSummary(gridId, payload) {
     </div>`).join('');
 }
 
-// ── Demo fallback ─────────────────────────────────────────────
 function demoResults() {
   return [
-    {id:1,name:'AIIMS Bhubaneswar',  lat:20.2525,lng:85.8118,distance_km:'4.2',eta_min:8,  score:94,specialty:'Cardiac ICU',      er_available:true, beds:12,city:'Bhubaneswar',ai_reason:'Best cardiac care. Cath lab 24/7. Highest match for MI.'},
-    {id:2,name:'Apollo Hospitals',   lat:20.3017,lng:85.8176,distance_km:'6.1',eta_min:11, score:81,specialty:'Multi-specialty',  er_available:true, beds:8, city:'Bhubaneswar',ai_reason:'Full ER. Cardiology team on standby. Higher bed availability.'},
-    {id:3,name:'Capital Hospital',   lat:20.2730,lng:85.8440,distance_km:'2.8',eta_min:5,  score:72,specialty:'General Emergency',er_available:true, beds:5, city:'Bhubaneswar',ai_reason:'Closest. Good for stabilization before transfer.'},
+    {id:1,name:'AIIMS Bhubaneswar', lat:20.2525,lng:85.8118,distance_km:'4.2',eta_min:8, score:94,specialty:'Cardiac ICU',     er_available:true,beds:12,city:'Bhubaneswar',ai_reason:'Best cardiac care. Cath lab 24/7. Highest match for MI.'},
+    {id:2,name:'Apollo Hospitals',  lat:20.3017,lng:85.8176,distance_km:'6.1',eta_min:11,score:81,specialty:'Multi-specialty', er_available:true,beds:8, city:'Bhubaneswar',ai_reason:'Full ER. Cardiology team on standby. Higher bed availability.'},
+    {id:3,name:'Capital Hospital',  lat:20.2730,lng:85.8440,distance_km:'2.8',eta_min:5, score:72,specialty:'General Emergency',er_available:true,beds:5,city:'Bhubaneswar',ai_reason:'Closest. Good for stabilisation before transfer.'},
   ];
 }
 </script>
