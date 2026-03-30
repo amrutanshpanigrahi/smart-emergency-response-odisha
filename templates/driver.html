@@ -3,341 +3,323 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>IERN · Driver Dispatch Tablet</title>
+<title>IERN · Driver Terminal</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --void:       #060810;
-  --deep:       #0d1117;
-  --panel:      #111827;
-  --raised:     #1c2333;
-  --rim:        #2a3448;
-  --dim:        #3d4f6b;
-  --muted:      #6b7c99;
-  --body:       #a8b8d0;
-  --bright:     #e2eaf5;
-  --white:      #f0f5ff;
-  --red:        #e63946;
-  --red-dim:    rgba(230,57,70,0.14);
-  --teal:       #0ea5a0;
-  --teal-dim:   rgba(14,165,160,0.14);
-  --amber:      #d97706;
-  --amber-dim:  rgba(217,119,6,0.14);
-  --blue:       #3b82f6;
-  --blue-dim:   rgba(59,130,246,0.12);
-  --green:      #059669;
-  --green-dim:  rgba(5,150,105,0.13);
-  --mono:       'JetBrains Mono', monospace;
-  --sans:       'Inter', sans-serif;
+  --white:      #ffffff;
+  --snow:       #f8f9fb;
+  --fog:        #f0f2f6;
+  --line:       #e2e6ed;
+  --mist:       #c4cad6;
+  --dim:        #8994a8;
+  --body:       #3e4a5c;
+  --ink:        #181e2a;
+  --red:        #d93025;
+  --red-light:  #fff1f0;
+  --red-mid:    rgba(217,48,37,0.12);
+  --red-border: rgba(217,48,37,0.25);
+  --teal:       #0d7377;
+  --teal-light: #edf7f7;
+  --teal-mid:   rgba(13,115,119,0.12);
+  --amber:      #b45309;
+  --amber-light:#fffbeb;
+  --amber-mid:  rgba(180,83,9,0.12);
+  --green:      #166534;
+  --green-light:#f0fdf4;
+  --green-mid:  rgba(22,101,52,0.12);
+  --mono:       'DM Mono', monospace;
+  --sans:       'DM Sans', sans-serif;
+  --syne:       'Syne', sans-serif;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body { height:100%; background:var(--void); color:var(--bright); font-family:var(--sans); }
+html, body { height:100%; background:var(--snow); color:var(--ink); font-family:var(--sans); -webkit-font-smoothing:antialiased; }
 
-/* ── Panels ── */
 .panel { display:none; min-height:100vh; flex-direction:column; }
-.panel.active { display:flex; }
+.panel.active { display:flex; animation:fade-up 0.2s ease; }
+@keyframes fade-up { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
 
-/* ── Top bar ── */
 .navbar {
-  display:flex; align-items:center; gap:12px;
-  padding:13px 18px; background:var(--panel);
-  border-bottom:1px solid var(--rim);
+  display:flex; align-items:center; gap:12px; padding:13px 18px;
+  background:var(--white); border-bottom:1px solid var(--line);
   position:sticky; top:0; z-index:50;
 }
-.navbar-brand { font-size:13px; font-weight:700; color:var(--white); letter-spacing:0.01em; }
-.navbar-sub   { font-size:10px; color:var(--muted); font-family:var(--mono); margin-top:1px; }
+.navbar-wordmark { font-family:var(--syne); font-size:14px; font-weight:700; color:var(--ink); letter-spacing:-0.01em; }
+.navbar-sub { font-size:10px; color:var(--dim); font-family:var(--mono); margin-top:1px; }
 .status-pill {
-  margin-left:auto; padding:4px 10px; border-radius:20px;
+  margin-left:auto; padding:5px 11px; border-radius:20px;
   font-size:10px; font-weight:600; font-family:var(--mono);
-  letter-spacing:0.06em; display:flex; align-items:center; gap:5px;
+  letter-spacing:0.06em; display:flex; align-items:center; gap:5px; border:1px solid;
 }
-.pill-standby { background:var(--amber-dim); color:#fbbf24; border:1px solid rgba(217,119,6,0.3); }
-.pill-active  { background:var(--red-dim);   color:#f87171; border:1px solid rgba(230,57,70,0.3); }
+.pill-standby { background:var(--amber-light); color:var(--amber); border-color:rgba(180,83,9,0.25); }
+.pill-active  { background:var(--red-light);   color:var(--red);   border-color:var(--red-border); }
 .pill-dot { width:5px; height:5px; border-radius:50%; background:currentColor; animation:blink 1.5s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-/* ════════════════════════════════
+/* ══════════════════════════════
    PANEL 0 · STANDBY
-════════════════════════════════ */
+══════════════════════════════ */
 #standby-panel {
-  background:var(--void); align-items:center; justify-content:center;
-  text-align:center; padding:40px 24px; position:relative; overflow:hidden;
+  background:var(--snow); align-items:center; justify-content:center;
+  text-align:center; padding:40px 24px;
 }
-#standby-panel::before {
-  content:''; position:absolute; inset:0;
-  background-image:
-    linear-gradient(var(--rim) 1px, transparent 1px),
-    linear-gradient(90deg, var(--rim) 1px, transparent 1px);
-  background-size:44px 44px; opacity:0.12;
-}
-.standby-badge {
-  display:inline-flex; align-items:center; gap:6px;
-  background:var(--amber-dim); border:1px solid rgba(217,119,6,0.35);
-  border-radius:24px; padding:6px 16px; font-size:10px; font-weight:700;
-  color:#fbbf24; font-family:var(--mono); letter-spacing:0.08em;
-  margin-bottom:24px; position:relative; z-index:1;
-}
-.standby-icon {
-  width:80px; height:80px; border-radius:24px;
-  background:rgba(217,119,6,0.1); border:1.5px solid rgba(217,119,6,0.3);
+.standby-icon-wrap {
+  width:80px; height:80px; border-radius:22px; margin:0 auto 24px;
+  background:var(--amber-light); border:1.5px solid rgba(180,83,9,0.2);
   display:flex; align-items:center; justify-content:center;
-  margin:0 auto 22px; position:relative; z-index:1;
+  box-shadow:0 4px 20px rgba(180,83,9,0.1);
 }
 .standby-heading {
-  font-size:22px; font-weight:700; color:var(--white);
-  margin-bottom:8px; position:relative; z-index:1;
+  font-family:var(--syne); font-size:26px; font-weight:700; color:var(--ink);
+  margin-bottom:8px;
 }
-.standby-sub {
-  font-size:13px; color:var(--muted); line-height:1.7;
-  margin-bottom:36px; position:relative; z-index:1;
-}
+.standby-sub { font-size:13px; color:var(--dim); line-height:1.7; margin-bottom:36px; }
 
-.crew-info {
-  background:var(--panel); border:1px solid var(--rim);
-  border-radius:16px; padding:18px; width:100%; max-width:340px;
-  position:relative; z-index:1;
+.crew-card {
+  background:var(--white); border:1px solid var(--line); border-radius:18px;
+  padding:20px; width:100%; max-width:340px;
+  box-shadow:0 2px 12px rgba(0,0,0,0.05);
 }
-.crew-row { display:flex; align-items:center; gap:13px; margin-bottom:14px; }
+.crew-row { display:flex; align-items:center; gap:13px; margin-bottom:16px; }
 .crew-av {
-  width:46px; height:46px; border-radius:50%;
-  background:var(--blue-dim); border:1px solid rgba(59,130,246,0.3);
+  width:48px; height:48px; border-radius:50%; flex-shrink:0;
+  background:#eff6ff; border:1.5px solid #bfdbfe;
   display:flex; align-items:center; justify-content:center;
-  font-size:14px; font-weight:700; color:#93c5fd; flex-shrink:0;
+  font-family:var(--syne); font-size:15px; font-weight:700; color:#1d4ed8;
 }
-.crew-fullname { font-size:14px; font-weight:600; color:var(--white); }
-.crew-reg      { font-size:11px; color:var(--muted); font-family:var(--mono); }
+.crew-fullname { font-size:15px; font-weight:600; color:var(--ink); }
+.crew-reg { font-size:11px; color:var(--dim); font-family:var(--mono); margin-top:2px; }
 .crew-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .stat-box {
-  background:var(--raised); border-radius:10px; padding:10px 12px;
-  text-align:center;
+  background:var(--fog); border-radius:11px; padding:11px 12px; text-align:center;
 }
-.stat-val { font-size:18px; font-weight:700; color:var(--white); font-family:var(--mono); }
-.stat-key { font-size:9px; color:var(--muted); margin-top:2px; }
+.stat-val { font-family:var(--syne); font-size:20px; font-weight:700; color:var(--ink); }
+.stat-key { font-size:9px; color:var(--dim); margin-top:3px; letter-spacing:0.04em; }
 
-.gps-bar-driver {
-  margin-top:16px; padding:8px 14px;
-  background:var(--raised); border:1px solid var(--rim); border-radius:10px;
-  font-size:11px; color:var(--body); font-family:var(--mono);
-  display:flex; align-items:center; gap:8px;
-  position:relative; z-index:1; width:100%; max-width:340px;
+.gps-pill {
+  margin-top:16px; padding:9px 16px; border-radius:20px;
+  background:var(--white); border:1px solid var(--line);
+  font-size:11px; color:var(--dim); font-family:var(--mono);
+  display:flex; align-items:center; gap:7px; max-width:340px; width:100%;
 }
+.gps-dot { width:7px; height:7px; border-radius:50%; background:var(--teal); flex-shrink:0; }
 
-/* ════════════════════════════════
+/* ══════════════════════════════
    PANEL 1 · INCOMING ALERT
-════════════════════════════════ */
-#alert-panel { background:var(--void); overflow-y:auto; }
+══════════════════════════════ */
+#alert-panel { background:var(--snow); overflow-y:auto; }
 
 .alert-hero {
-  background:var(--red-dim); border-bottom:1px solid rgba(230,57,70,0.25);
+  background:var(--red-light); border-bottom:1px solid rgba(217,48,37,0.15);
   padding:16px 18px; display:flex; align-items:center; gap:12px;
 }
 .alert-siren {
-  width:44px; height:44px; border-radius:12px;
-  background:rgba(230,57,70,0.15); border:1px solid rgba(230,57,70,0.3);
+  width:46px; height:46px; border-radius:13px;
+  background:var(--red-mid); border:1px solid var(--red-border);
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
-  animation:siren 1s ease-in-out infinite;
+  animation:siren-pulse 1s ease-in-out infinite;
 }
-@keyframes siren { 0%,100%{background:rgba(230,57,70,.15)} 50%{background:rgba(230,57,70,.35)} }
-.alert-label { font-size:16px; font-weight:700; color:#f87171; }
-.alert-time  { font-size:11px; color:var(--muted); font-family:var(--mono); margin-top:2px; }
-.alert-ack-btn {
-  margin-left:auto; padding:8px 16px; border-radius:9px;
+@keyframes siren-pulse { 0%,100%{background:var(--red-mid)} 50%{background:rgba(217,48,37,0.22)} }
+.alert-label { font-family:var(--syne); font-size:17px; font-weight:700; color:var(--red); }
+.alert-time  { font-size:11px; color:var(--dim); font-family:var(--mono); margin-top:3px; }
+.ack-btn {
+  margin-left:auto; padding:9px 16px; border-radius:9px;
   background:var(--red); color:var(--white); border:none;
-  font-size:12px; font-weight:700; cursor:pointer; font-family:var(--sans);
-  transition:all 0.15s;
+  font-size:12px; font-weight:700; cursor:pointer; font-family:var(--syne);
+  box-shadow:0 2px 8px rgba(217,48,37,0.25); transition:all 0.15s;
 }
-.alert-ack-btn:hover { background:#c0303b; }
+.ack-btn:hover { background:#b82520; }
 
 .info-section { padding:14px 18px 0; }
 .sec-head {
-  font-size:9px; font-weight:600; color:var(--muted);
+  font-size:9px; font-weight:700; color:var(--dim);
   letter-spacing:0.1em; text-transform:uppercase;
   margin-bottom:10px; display:flex; align-items:center; gap:8px;
 }
-.sec-head::after { content:''; flex:1; height:1px; background:var(--rim); }
+.sec-head::after { content:''; flex:1; height:1px; background:var(--line); }
 
-/* Patient card */
+/* Patient block */
 .patient-block {
-  background:var(--panel); border:1px solid var(--rim);
-  border-radius:13px; padding:14px 15px; margin-bottom:10px;
+  background:var(--white); border:1px solid var(--line); border-radius:14px;
+  padding:14px 16px; margin-bottom:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
 }
-.pt-name-row { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.pt-name-row { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
 .pt-avatar {
-  width:42px; height:42px; border-radius:50%;
-  background:var(--red-dim); border:1px solid rgba(230,57,70,0.25);
+  width:44px; height:44px; border-radius:50%;
+  background:var(--red-mid); border:1px solid var(--red-border);
   display:flex; align-items:center; justify-content:center;
-  font-size:14px; font-weight:700; color:#f87171; flex-shrink:0;
+  font-family:var(--syne); font-size:16px; font-weight:700; color:var(--red); flex-shrink:0;
 }
-.pt-name     { font-size:14px; font-weight:600; color:var(--white); }
-.pt-subtitle { font-size:11px; color:var(--muted); margin-top:2px; }
+.pt-name     { font-size:15px; font-weight:600; color:var(--ink); }
+.pt-subtitle { font-size:11px; color:var(--dim); margin-top:2px; }
 .sev-chip {
-  margin-left:auto; padding:4px 10px; border-radius:20px;
-  font-size:10px; font-weight:700;
+  margin-left:auto; padding:5px 11px; border-radius:20px;
+  font-size:10px; font-weight:700; font-family:var(--mono);
 }
-.sev-critical { background:var(--red-dim); color:#f87171; border:1px solid rgba(230,57,70,0.3); }
-.sev-serious  { background:var(--amber-dim); color:#fbbf24; border:1px solid rgba(217,119,6,0.3); }
-.sev-stable   { background:var(--green-dim); color:#34d399; border:1px solid rgba(5,150,105,0.3); }
+.sev-critical { background:var(--red-light); color:var(--red); border:1px solid var(--red-border); }
+.sev-serious  { background:var(--amber-light); color:var(--amber); border:1px solid rgba(180,83,9,0.25); }
+.sev-stable   { background:var(--green-light); color:var(--green); border:1px solid rgba(22,101,52,0.2); }
 
 .pt-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-.pt-field { background:var(--raised); border-radius:9px; padding:9px 11px; }
-.pt-field-key { font-size:9px; color:var(--muted); margin-bottom:3px; }
-.pt-field-val { font-size:13px; font-weight:600; color:var(--white); }
+.pt-field { background:var(--fog); border-radius:9px; padding:10px 12px; }
+.pt-field-key { font-size:9px; color:var(--dim); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px; }
+.pt-field-val { font-size:13px; font-weight:600; color:var(--ink); }
 
-/* Vitals card */
+/* Vitals block */
 .vitals-block {
-  background:var(--panel); border:1px solid var(--rim);
-  border-radius:13px; padding:14px 15px; margin-bottom:10px;
+  background:var(--white); border:1px solid var(--line); border-radius:14px;
+  padding:14px 16px; margin-bottom:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
 }
-.vitals-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-.vital-cell  { text-align:center; background:var(--raised); border-radius:9px; padding:10px 8px; }
-.vit-val { font-size:16px; font-weight:700; font-family:var(--mono); }
-.vit-key { font-size:9px; color:var(--muted); margin-top:3px; }
+.vitals-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.vital-cell { text-align:center; background:var(--fog); border-radius:9px; padding:10px 8px; }
+.vit-val { font-size:17px; font-weight:600; font-family:var(--mono); }
+.vit-key { font-size:9px; color:var(--dim); margin-top:3px; letter-spacing:0.04em; }
 .vit-ok     { color:var(--teal); }
 .vit-warn   { color:var(--amber); }
 .vit-danger { color:var(--red); }
 
-/* Destination block */
+/* Destination */
 .dest-block {
-  background:var(--panel); border:1px solid var(--rim);
-  border-radius:13px; padding:14px 15px; margin-bottom:10px;
+  background:var(--white); border:1px solid var(--line); border-radius:14px;
+  padding:14px 16px; margin-bottom:10px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
 }
 .dest-row { display:flex; align-items:center; gap:10px; }
 .dest-icon {
-  width:38px; height:38px; border-radius:10px; flex-shrink:0;
-  background:var(--teal-dim); border:1px solid rgba(14,165,160,0.25);
+  width:40px; height:40px; border-radius:11px; flex-shrink:0;
+  background:var(--teal-light); border:1px solid rgba(13,115,119,0.2);
   display:flex; align-items:center; justify-content:center;
 }
-.dest-name    { font-size:14px; font-weight:600; color:var(--white); }
-.dest-address { font-size:11px; color:var(--muted); margin-top:2px; }
-.dest-km      { margin-left:auto; font-size:13px; font-weight:600; color:var(--teal); font-family:var(--mono); }
-
+.dest-name    { font-size:14px; font-weight:600; color:var(--ink); }
+.dest-address { font-size:11px; color:var(--dim); margin-top:2px; }
+.dest-km      { margin-left:auto; font-size:14px; font-weight:700; color:var(--teal); font-family:var(--mono); }
 .ai-note {
-  background:var(--raised); border-radius:9px; padding:10px 12px;
-  font-size:11px; color:#93c5fd; margin-top:10px; line-height:1.5;
-  display:flex; gap:7px; align-items:flex-start;
+  margin-top:10px; background:var(--fog); border-radius:9px; padding:10px 12px;
+  font-size:11px; color:var(--body); display:flex; gap:7px; align-items:flex-start;
+  line-height:1.55; border-left:3px solid var(--teal);
 }
 
-/* Accept / Decline actions */
-.dispatch-actions {
-  padding:14px 18px 28px; display:flex; gap:10px;
-}
+.dispatch-actions { padding:14px 18px 28px; display:flex; gap:10px; }
 .accept-btn, .defer-btn {
-  flex:1; padding:14px; border-radius:11px; border:none;
-  font-size:14px; font-weight:700; cursor:pointer; font-family:var(--sans);
+  flex:1; padding:15px; border-radius:12px; border:none;
+  font-size:14px; font-weight:700; cursor:pointer; font-family:var(--syne);
   transition:all 0.15s;
 }
-.accept-btn { background:var(--teal); color:var(--void); }
-.accept-btn:hover { background:#0cc9c3; }
-.defer-btn  { background:var(--raised); color:var(--muted); border:1px solid var(--rim); }
-.defer-btn:hover { background:var(--dim); color:var(--bright); }
+.accept-btn {
+  background:var(--teal); color:var(--white);
+  box-shadow:0 4px 16px rgba(13,115,119,0.25);
+}
+.accept-btn:hover { background:#0a5f63; }
+.defer-btn {
+  background:var(--fog); color:var(--dim); border:1px solid var(--line);
+}
+.defer-btn:hover { background:var(--line); color:var(--body); }
 
-/* ════════════════════════════════
+/* ══════════════════════════════
    PANEL 2 · ACTIVE MISSION
-════════════════════════════════ */
-#mission-panel { background:var(--void); }
+══════════════════════════════ */
+#mission-panel { background:var(--snow); }
 #route-map { height:300px; width:100%; }
 
-.mission-body { padding:14px 18px 32px; overflow-y:auto; }
+.mission-body { padding:16px 18px 40px; overflow-y:auto; }
 
-.mission-header {
-  display:flex; align-items:center; gap:10px;
-  background:var(--panel); border:1px solid rgba(14,165,160,0.25);
-  border-radius:13px; padding:13px 14px; margin-bottom:12px;
+/* Big ETA banner — most glanceable element */
+.eta-banner {
+  background:var(--ink); color:var(--white); border-radius:18px;
+  padding:20px; margin-bottom:14px; display:flex; align-items:center; gap:16px;
+  box-shadow:0 4px 20px rgba(24,30,42,0.15);
 }
-.mission-icon {
-  width:38px; height:38px; border-radius:10px; flex-shrink:0;
-  background:var(--teal-dim); border:1px solid rgba(14,165,160,0.25);
-  display:flex; align-items:center; justify-content:center;
-}
-.mission-dest { font-size:14px; font-weight:600; color:var(--white); }
-.mission-sub  { font-size:11px; color:var(--muted); margin-top:2px; }
-.mission-eta-badge {
-  margin-left:auto; text-align:center;
-}
-.meta-eta-big  { font-size:26px; font-weight:700; color:var(--white); line-height:1; font-family:var(--mono); }
-.meta-eta-unit { font-size:10px; color:var(--muted); }
+.eta-num  { font-family:var(--syne); font-size:56px; font-weight:800; color:var(--white); line-height:1; }
+.eta-unit { font-size:13px; color:var(--dim); margin-top:4px; }
+.eta-right { flex:1; }
+.eta-dest  { font-size:14px; font-weight:600; color:var(--white); margin-bottom:4px; line-height:1.3; }
+.eta-status { font-size:11px; color:rgba(255,255,255,0.45); font-family:var(--mono); }
 
-/* Quick vitals strip on mission panel */
+/* Quick vitals strip */
 .vitals-strip {
-  display:flex; gap:8px; overflow-x:auto; margin-bottom:12px; padding-bottom:2px;
+  display:flex; gap:8px; overflow-x:auto; margin-bottom:14px; padding-bottom:2px;
 }
 .vs-pill {
-  flex-shrink:0; background:var(--panel); border:1px solid var(--rim);
-  border-radius:10px; padding:8px 12px; text-align:center; min-width:72px;
+  flex-shrink:0; background:var(--white); border:1px solid var(--line);
+  border-radius:11px; padding:9px 14px; text-align:center; min-width:72px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.04);
 }
-.vs-val { font-size:14px; font-weight:600; font-family:var(--mono); }
-.vs-key { font-size:9px; color:var(--muted); margin-top:2px; }
+.vs-val { font-size:14px; font-weight:600; font-family:var(--mono); color:var(--teal); }
+.vs-key { font-size:9px; color:var(--dim); margin-top:3px; letter-spacing:0.04em; }
 
-/* Prep checklist */
+/* Checklist */
+.sec-label {
+  font-size:10px; font-weight:700; color:var(--dim);
+  letter-spacing:0.1em; text-transform:uppercase;
+  margin-bottom:10px;
+}
 .checklist-card {
-  background:var(--panel); border:1px solid var(--rim);
-  border-radius:13px; padding:14px 15px; margin-bottom:12px;
+  background:var(--white); border:1px solid var(--line); border-radius:14px;
+  padding:4px 16px; margin-bottom:14px;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
 }
 .check-row {
-  display:flex; align-items:center; gap:10px;
-  padding:8px 0; border-bottom:1px solid var(--rim); cursor:pointer;
+  display:flex; align-items:center; gap:12px;
+  padding:12px 0; border-bottom:1px solid var(--fog); cursor:pointer;
+  transition:opacity 0.15s;
 }
 .check-row:last-child { border-bottom:none; }
 .check-box {
-  width:18px; height:18px; border-radius:5px; flex-shrink:0;
-  border:1.5px solid var(--dim); background:transparent;
+  width:20px; height:20px; border-radius:6px; flex-shrink:0;
+  border:1.5px solid var(--mist); background:var(--white);
   display:flex; align-items:center; justify-content:center;
   transition:all 0.15s;
 }
-.check-row.ticked .check-box {
-  background:var(--teal); border-color:var(--teal);
-}
-.check-label { font-size:13px; color:var(--bright); }
-.check-row.ticked .check-label { color:var(--muted); text-decoration:line-through; }
+.check-row.ticked .check-box { background:var(--teal); border-color:var(--teal); }
+.check-label { font-size:13px; color:var(--ink); font-weight:500; line-height:1.3; }
+.check-row.ticked .check-label { color:var(--dim); text-decoration:line-through; }
 
-/* Arrived button */
 .arrived-btn {
-  width:100%; padding:15px; border-radius:12px; border:none;
-  background:var(--teal); color:var(--void); font-size:15px;
-  font-weight:700; cursor:pointer; font-family:var(--sans);
-  transition:all 0.15s; margin-top:4px;
+  width:100%; padding:16px; border-radius:13px; border:none;
+  background:var(--teal); color:var(--white); font-size:15px;
+  font-weight:700; cursor:pointer; font-family:var(--syne);
+  box-shadow:0 4px 16px rgba(13,115,119,0.25); transition:all 0.15s;
 }
-.arrived-btn:hover { background:#0cc9c3; }
+.arrived-btn:hover { background:#0a5f63; }
 
-/* ── Scrollbar ── */
 ::-webkit-scrollbar { width:4px; height:4px; }
-::-webkit-scrollbar-track { background:var(--deep); }
-::-webkit-scrollbar-thumb { background:var(--dim); border-radius:4px; }
+::-webkit-scrollbar-track { background:var(--fog); }
+::-webkit-scrollbar-thumb { background:var(--mist); border-radius:4px; }
 </style>
 </head>
 <body>
 
-<!-- ════════════════════════════════════
+<!-- ══════════════════════════════
      PANEL 0 · STANDBY
-════════════════════════════════════ -->
+══════════════════════════════ -->
 <div id="standby-panel" class="panel active">
   <div class="navbar">
-    <div class="navbar-brand">IERN · Driver Terminal</div>
+    <div>
+      <div class="navbar-wordmark">IERN Driver</div>
+      <div class="navbar-sub">DISPATCH TERMINAL</div>
+    </div>
     <div class="status-pill pill-standby">
       <div class="pill-dot"></div>STANDBY
     </div>
   </div>
 
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px">
-    <div class="standby-badge">
-      <div class="pill-dot" style="background:#fbbf24"></div>
-      AWAITING DISPATCH
-    </div>
-    <div class="standby-icon">
-      <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
-        <rect x="4" y="12" width="30" height="18" rx="4" stroke="#d97706" stroke-width="1.8"/>
-        <path d="M10 12V9a4 4 0 018 0v3" stroke="#d97706" stroke-width="1.8" stroke-linecap="round"/>
-        <circle cx="11" cy="21" r="3" fill="#d97706"/>
-        <circle cx="27" cy="21" r="3" fill="#d97706"/>
+    <div class="standby-icon-wrap">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+        <rect x="5" y="13" width="30" height="19" rx="5" stroke="#b45309" stroke-width="2"/>
+        <path d="M12 13V10a5 5 0 0110 0v3" stroke="#b45309" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="13" cy="22.5" r="3.5" fill="#b45309"/>
+        <circle cx="27" cy="22.5" r="3.5" fill="#b45309"/>
+        <rect x="17" y="20" width="6" height="5" rx="1.5" fill="#b45309" opacity=".4"/>
       </svg>
     </div>
     <div class="standby-heading">On Standby</div>
-    <div class="standby-sub">
-      Waiting for dispatch order.<br>New incidents will appear here instantly.
-    </div>
+    <div class="standby-sub">Waiting for dispatch order.<br>New incidents appear here instantly.</div>
 
-    <div class="crew-info">
+    <div class="crew-card">
       <div class="crew-row">
         <div class="crew-av">RD</div>
         <div>
@@ -348,7 +330,7 @@ html, body { height:100%; background:var(--void); color:var(--bright); font-fami
       <div class="crew-stats">
         <div class="stat-box">
           <div class="stat-val">12</div>
-          <div class="stat-key">Today's runs</div>
+          <div class="stat-key">Today's Runs</div>
         </div>
         <div class="stat-box">
           <div class="stat-val">4.9</div>
@@ -359,30 +341,26 @@ html, body { height:100%; background:var(--void); color:var(--bright); font-fami
           <div class="stat-key">Avg ETA (min)</div>
         </div>
         <div class="stat-box">
-          <div class="stat-val">Zone A</div>
-          <div class="stat-key">Coverage area</div>
+          <div class="stat-val">A</div>
+          <div class="stat-key">Coverage Zone</div>
         </div>
       </div>
     </div>
 
-    <div class="gps-bar-driver" id="driver-gps-strip">
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <circle cx="6" cy="6" r="5" stroke="#93c5fd" stroke-width="1"/>
-        <circle cx="6" cy="6" r="2" fill="#93c5fd"/>
-      </svg>
-      Acquiring GPS position...
+    <div class="gps-pill" id="driver-gps-strip">
+      <div class="gps-dot"></div>Acquiring GPS position...
     </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════
+<!-- ══════════════════════════════
      PANEL 1 · INCOMING ALERT
-════════════════════════════════════ -->
+══════════════════════════════ -->
 <div id="alert-panel" class="panel">
   <div class="navbar">
     <div>
-      <div class="navbar-brand">Incoming Dispatch</div>
-      <div class="navbar-sub">New incident · Immediate response required</div>
+      <div class="navbar-wordmark">Incoming Dispatch</div>
+      <div class="navbar-sub">IMMEDIATE RESPONSE REQUIRED</div>
     </div>
     <div class="status-pill pill-active">
       <div class="pill-dot"></div>ALERT
@@ -392,18 +370,17 @@ html, body { height:100%; background:var(--void); color:var(--bright); font-fami
   <div class="alert-hero">
     <div class="alert-siren">
       <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-        <path d="M11 4v2M11 16v2M4 11H2M20 11h-2M6.3 6.3L4.9 4.9M17.1 17.1l-1.4-1.4M17.1 6.3l-1.4 1.4M6.3 17.1l-1.4-1.4" stroke="#f87171" stroke-width="1.6" stroke-linecap="round"/>
-        <circle cx="11" cy="11" r="4" stroke="#f87171" stroke-width="1.6"/>
+        <path d="M11 4v2M11 16v2M4 11H2M20 11h-2M6.3 6.3L4.9 4.9M17.1 17.1l-1.4-1.4M17.1 6.3l-1.4 1.4M6.3 17.1l-1.4-1.4" stroke="#d93025" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="11" cy="11" r="4" stroke="#d93025" stroke-width="1.6"/>
       </svg>
     </div>
     <div>
       <div class="alert-label">New Emergency Incident</div>
       <div class="alert-time" id="alert-timestamp">--:--</div>
     </div>
-    <button class="alert-ack-btn" onclick="acknowledgeAlert()">ACK</button>
+    <button class="ack-btn" onclick="acknowledgeAlert()">ACK</button>
   </div>
 
-  <!-- Patient info -->
   <div class="info-section">
     <div class="sec-head">Patient</div>
     <div class="patient-block">
@@ -421,47 +398,45 @@ html, body { height:100%; background:var(--void); color:var(--bright); font-fami
           <div class="pt-field-val" id="alert-condition">--</div>
         </div>
         <div class="pt-field">
-          <div class="pt-field-key">Blood group</div>
+          <div class="pt-field-key">Blood Group</div>
           <div class="pt-field-val" id="alert-blood">--</div>
         </div>
         <div class="pt-field" style="grid-column:1/-1">
-          <div class="pt-field-key">Medical history</div>
-          <div class="pt-field-val" id="alert-history" style="font-size:12px;font-weight:400">None recorded</div>
+          <div class="pt-field-key">Medical History</div>
+          <div class="pt-field-val" id="alert-history" style="font-size:12px;font-weight:500">None recorded</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Vitals (shown if doctor-initiated) -->
   <div class="info-section" id="vitals-section" style="display:none">
-    <div class="sec-head">Vitals on scene</div>
+    <div class="sec-head">Vitals on Scene</div>
     <div class="vitals-block">
-      <div class="vitals-grid" id="alert-vitals-grid"></div>
+      <div class="vitals-grid-3" id="alert-vitals-grid"></div>
     </div>
   </div>
 
-  <!-- Destination -->
   <div class="info-section">
     <div class="sec-head">Destination</div>
     <div class="dest-block">
       <div class="dest-row">
         <div class="dest-icon">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-            <rect x="4" y="2" width="10" height="15" rx="1.5" fill="none" stroke="#0ea5a0" stroke-width="1.4"/>
-            <line x1="9" y1="2" x2="9" y2="17" stroke="#0ea5a0" stroke-width="1"/>
-            <line x1="4" y1="9.5" x2="14" y2="9.5" stroke="#0ea5a0" stroke-width="1"/>
+          <svg width="19" height="19" viewBox="0 0 19 19" fill="none">
+            <rect x="4" y="2" width="11" height="15" rx="2" fill="none" stroke="#0d7377" stroke-width="1.5"/>
+            <line x1="9.5" y1="2" x2="9.5" y2="17" stroke="#0d7377" stroke-width="1"/>
+            <line x1="4" y1="9.5" x2="15" y2="9.5" stroke="#0d7377" stroke-width="1"/>
           </svg>
         </div>
         <div>
-          <div class="dest-name"    id="alert-hosp-name">--</div>
+          <div class="dest-name" id="alert-hosp-name">--</div>
           <div class="dest-address" id="alert-hosp-city">--</div>
         </div>
         <div class="dest-km" id="alert-hosp-dist">-- km</div>
       </div>
       <div class="ai-note">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="flex-shrink:0;margin-top:1px">
-          <circle cx="6.5" cy="6.5" r="5.5" fill="none" stroke="#93c5fd" stroke-width="1"/>
-          <path d="M4 6.5l1.8 1.8L9 4" stroke="#93c5fd" stroke-width="1.2" stroke-linecap="round"/>
+          <circle cx="6.5" cy="6.5" r="5.5" fill="none" stroke="#0d7377" stroke-width="1.2"/>
+          <path d="M4 6.5l1.8 1.8L9 4" stroke="#0d7377" stroke-width="1.2" stroke-linecap="round"/>
         </svg>
         <span id="alert-ai-note">AI recommendation pending</span>
       </div>
@@ -474,14 +449,14 @@ html, body { height:100%; background:var(--void); color:var(--bright); font-fami
   </div>
 </div>
 
-<!-- ════════════════════════════════════
+<!-- ══════════════════════════════
      PANEL 2 · ACTIVE MISSION
-════════════════════════════════════ -->
+══════════════════════════════ -->
 <div id="mission-panel" class="panel">
   <div class="navbar">
     <div>
-      <div class="navbar-brand">Active Mission</div>
-      <div class="navbar-sub" id="mission-dest-label">En route</div>
+      <div class="navbar-wordmark">Active Mission</div>
+      <div class="navbar-sub" id="mission-dest-label">EN ROUTE</div>
     </div>
     <div class="status-pill pill-active">
       <div class="pill-dot"></div>EN ROUTE
@@ -491,35 +466,22 @@ html, body { height:100%; background:var(--void); color:var(--bright); font-fami
   <div id="route-map"></div>
 
   <div class="mission-body">
-    <!-- ETA + destination -->
-    <div class="mission-header">
-      <div class="mission-icon">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <rect x="4" y="2" width="10" height="15" rx="1.5" fill="none" stroke="#0ea5a0" stroke-width="1.4"/>
-          <line x1="9" y1="2" x2="9" y2="17" stroke="#0ea5a0" stroke-width="1"/>
-          <line x1="4" y1="9.5" x2="14" y2="9.5" stroke="#0ea5a0" stroke-width="1"/>
-        </svg>
-      </div>
+    <!-- Big glanceable ETA — critical for a driver -->
+    <div class="eta-banner">
       <div>
-        <div class="mission-dest" id="mission-hosp-name">--</div>
-        <div class="mission-sub"  id="mission-hosp-city">Navigating</div>
+        <div class="eta-num" id="mission-eta">--</div>
+        <div class="eta-unit">min ETA</div>
       </div>
-      <div class="mission-eta-badge">
-        <div class="meta-eta-big"  id="mission-eta">--</div>
-        <div class="meta-eta-unit">min ETA</div>
+      <div class="eta-right">
+        <div class="eta-dest" id="mission-hosp-name">--</div>
+        <div class="eta-status" id="mission-hosp-city">Navigating to hospital</div>
       </div>
     </div>
 
-    <!-- Quick vitals strip -->
     <div id="mission-vitals-strip" class="vitals-strip" style="display:none"></div>
 
-    <!-- Prep checklist -->
-    <div class="info-section" style="padding:0 0 10px">
-      <div class="sec-head">Pre-arrival checklist</div>
-    </div>
-    <div class="checklist-card" id="checklist-container">
-      <!-- Populated dynamically based on condition -->
-    </div>
+    <div class="sec-label">Pre-arrival Checklist</div>
+    <div class="checklist-card" id="checklist-container"></div>
 
     <button class="arrived-btn" onclick="markArrived()">Mark as Arrived at Hospital</button>
   </div>
@@ -528,291 +490,170 @@ html, body { height:100%; background:var(--void); color:var(--bright); font-fami
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 <script>
-/*
- * IERN Driver Terminal — Mission Controller
- * Handles real-time incident dispatch via SocketIO,
- * map routing, and pre-arrival preparation tracking.
- */
+const mission = { driverLat:20.2961, driverLng:85.8245, activeCase:null };
+let routeMap=null, driverMarker=null, pickupMarker=null, hospitalMarker=null;
 
-// ── Mission state ─────────────────────────────────────────────
-const mission = {
-  driverLat:   20.2961,
-  driverLng:   85.8245,
-  activeCase:  null,
-  checklistItems: [],
-};
-
-// ── Map references ────────────────────────────────────────────
-let routeMap      = null;
-let driverMarker  = null;
-let pickupMarker  = null;
-let hospitalMarker = null;
-
-// ── Checklist definitions per condition ──────────────────────
 const prepLists = {
-  cardiac:     ['Defibrillator charged', 'IV line ready', 'Oxygen mask on patient', 'ECG leads attached', 'Aspirin administered if conscious'],
-  stroke:      ['Neuro vitals monitored', 'Oxygen saturation tracked', 'No food/water given', 'Time of onset recorded', 'CT referral note ready'],
-  trauma:      ['Bleeding controlled', 'C-spine collar fitted', 'IV access secured', 'Tourniquet applied if needed', 'Blood pressure stable'],
-  respiratory: ['Oxygen therapy active', 'Nebuliser administered', 'Pulse-ox monitoring', 'Position: sitting upright', 'Suction device ready'],
-  burns:       ['Sterile dressing applied', 'IV fluids running', 'Morphine administered', 'Burn area documented', 'Airway assessed'],
-  obstetric:   ['Position: left lateral', 'Fetal heart rate monitored', 'IV fluids running', 'Emergency delivery kit ready', 'OB notes on file'],
-  poisoning:   ['Airway clear', 'Activated charcoal if indicated', 'Poison control contacted', 'Vitals every 2 min', 'Sample collected'],
-  general:     ['Vitals documented', 'IV access secured', 'Oxygen available', 'Patient secured on stretcher', 'Hospital pre-alerted'],
+  cardiac:     ['Defibrillator charged','IV line ready','Oxygen mask on patient','ECG leads attached','Aspirin if conscious'],
+  stroke:      ['Neuro vitals monitored','O₂ saturation tracked','No food/water given','Onset time recorded','CT referral note ready'],
+  trauma:      ['Bleeding controlled','C-spine collar fitted','IV access secured','Tourniquet if needed','BP stabilised'],
+  respiratory: ['O₂ therapy active','Nebuliser administered','Pulse-ox monitoring','Upright position','Suction device ready'],
+  burns:       ['Sterile dressing applied','IV fluids running','Morphine administered','Burn area documented','Airway assessed'],
+  obstetric:   ['Left lateral position','Fetal HR monitored','IV fluids running','Delivery kit ready','OB notes on file'],
+  poisoning:   ['Airway clear','Activated charcoal if indicated','Poison control contacted','Vitals every 2 min','Sample collected'],
+  general:     ['Vitals documented','IV access secured','Oxygen available','Patient secured on stretcher','Hospital pre-alerted'],
 };
 
-// ── GPS acquisition ───────────────────────────────────────────
 navigator.geolocation?.getCurrentPosition(
   fix => {
     mission.driverLat = fix.coords.latitude;
     mission.driverLng = fix.coords.longitude;
-    document.getElementById('driver-gps-strip').textContent =
-      'GPS: ' + fix.coords.latitude.toFixed(5) + ', ' + fix.coords.longitude.toFixed(5);
+    document.getElementById('driver-gps-strip').innerHTML =
+      '<div class="gps-dot"></div>GPS: ' + fix.coords.latitude.toFixed(5) + ', ' + fix.coords.longitude.toFixed(5);
   },
   () => {
-    document.getElementById('driver-gps-strip').textContent = 'GPS: Bhubaneswar default position';
+    document.getElementById('driver-gps-strip').innerHTML =
+      '<div class="gps-dot" style="background:var(--amber)"></div>GPS: Bhubaneswar default';
   }
 );
 
-// ── Panel switching ───────────────────────────────────────────
-function showPanel(targetId) {
+function showPanel(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById(targetId).classList.add('active');
+  document.getElementById(id).classList.add('active');
 }
 
-// ── SocketIO — listen for new incident ───────────────────────
 const channel = io();
+channel.on('new_incident', payload => { mission.activeCase=payload; renderAlertPanel(payload); showPanel('alert-panel'); });
+channel.on('ambulance_dispatch', payload => { mission.activeCase=payload; renderAlertPanel(payload); showPanel('alert-panel'); });
 
-channel.on('new_incident', payload => {
-  mission.activeCase = payload;
-  renderAlertPanel(payload);
-  showPanel('alert-panel');
-});
-
-channel.on('ambulance_dispatch', payload => {
-  mission.activeCase = payload;
-  renderAlertPanel(payload);
-  showPanel('alert-panel');
-});
-
-// ── Populate the incoming alert panel ────────────────────────
 function renderAlertPanel(data) {
   const now = new Date();
-  document.getElementById('alert-timestamp').textContent =
-    now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-
-  /* Patient fields */
+  document.getElementById('alert-timestamp').textContent = now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   const initials = (data.patient_name || data.patient?.name || 'P').charAt(0).toUpperCase();
   document.getElementById('alert-pt-avatar').textContent = initials;
   document.getElementById('alert-pt-name').textContent   = data.patient_name || data.patient?.name || 'Unknown';
-  document.getElementById('alert-pt-meta').textContent   =
-    (data.patient?.age || 'Age unknown') + ' · ' + (data.patient?.gender || 'Gender unknown');
+  document.getElementById('alert-pt-meta').textContent   = (data.patient?.age||'Age unknown') + ' · ' + (data.patient?.gender||'Gender unknown');
   document.getElementById('alert-condition').textContent = data.symptom || data.condition || '--';
   document.getElementById('alert-blood').textContent     = data.blood_group || data.patient?.blood || 'Unknown';
   document.getElementById('alert-history').textContent   = data.patient?.history || 'None recorded';
-
-  /* Severity chip */
-  const sev    = data.severity || 'serious';
-  const sevEl  = document.getElementById('alert-sev-chip');
+  const sev = data.severity || 'serious';
+  const sevEl = document.getElementById('alert-sev-chip');
   sevEl.textContent = sev.charAt(0).toUpperCase() + sev.slice(1);
   sevEl.className   = 'sev-chip sev-' + sev;
-
-  /* Hospital details */
   document.getElementById('alert-hosp-name').textContent = data.hospital_name || '--';
-  document.getElementById('alert-hosp-city').textContent = data.hospital_city  || 'Odisha';
+  document.getElementById('alert-hosp-city').textContent = data.hospital_city || 'Odisha';
   document.getElementById('alert-hosp-dist').textContent = data.distance_km ? data.distance_km + ' km' : '--';
-  document.getElementById('alert-ai-note').textContent   = data.ai_reason || 'ML-selected based on specialty match and distance';
-
-  /* Vitals — only shown for doctor-initiated dispatch */
+  document.getElementById('alert-ai-note').textContent   = data.ai_reason || 'ML-selected based on specialty and distance';
   if (data.vitals) {
     document.getElementById('vitals-section').style.display = 'block';
     renderVitalsGrid('alert-vitals-grid', data.vitals);
   }
 }
 
-// ── Render vitals into a grid ─────────────────────────────────
-function renderVitalsGrid(containerId, vitals) {
+function renderVitalsGrid(id, vitals) {
   const fields = [
-    { key:'BP',    val: vitals.bp      || '?',            warn: false, danger: false },
-    { key:'SpO₂',  val: vitals.spo2    ? vitals.spo2+'%':'?', danger: vitals.spo2 && +vitals.spo2 < 90, warn: vitals.spo2 && +vitals.spo2 < 94 },
-    { key:'Pulse', val: vitals.pulse   ? vitals.pulse+' bpm':'?', danger: vitals.pulse && (+vitals.pulse>140||+vitals.pulse<40) },
-    { key:'GCS',   val: vitals.gcs     ? vitals.gcs+'/15':'?', danger: vitals.gcs && +vitals.gcs <= 8 },
-    { key:'Temp',  val: vitals.temp    ? vitals.temp+'°C':'?', warn: vitals.temp && (+vitals.temp>38.5||+vitals.temp<36) },
-    { key:'RR',    val: vitals.rr      ? vitals.rr+'/min':'?', warn: vitals.rr && (+vitals.rr>25||+vitals.rr<10) },
+    {key:'BP',    val:vitals.bp||'?',                                     danger:false,warn:false},
+    {key:'SpO₂',  val:vitals.spo2?vitals.spo2+'%':'?',                   danger:vitals.spo2&&+vitals.spo2<90,warn:vitals.spo2&&+vitals.spo2<94},
+    {key:'Pulse', val:vitals.pulse?vitals.pulse+' bpm':'?',               danger:vitals.pulse&&(+vitals.pulse>140||+vitals.pulse<40)},
+    {key:'GCS',   val:vitals.gcs?vitals.gcs+'/15':'?',                    danger:vitals.gcs&&+vitals.gcs<=8},
+    {key:'Temp',  val:vitals.temp?vitals.temp+'°C':'?',                   warn:vitals.temp&&(+vitals.temp>38.5||+vitals.temp<36)},
+    {key:'RR',    val:vitals.rr?vitals.rr+'/min':'?',                     warn:vitals.rr&&(+vitals.rr>25||+vitals.rr<10)},
   ];
-
-  document.getElementById(containerId).innerHTML = fields.map(f => `
+  document.getElementById(id).innerHTML = fields.map(f => `
     <div class="vital-cell">
-      <div class="vit-val ${f.danger ? 'vit-danger' : f.warn ? 'vit-warn' : 'vit-ok'}">${f.val}</div>
+      <div class="vit-val ${f.danger?'vit-danger':f.warn?'vit-warn':'vit-ok'}">${f.val}</div>
       <div class="vit-key">${f.key}</div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ── Acknowledge alert ─────────────────────────────────────────
-function acknowledgeAlert() {
-  /* Play haptic feedback if available */
-  navigator.vibrate?.([100, 50, 100]);
-}
+function acknowledgeAlert() { navigator.vibrate?.([100,50,100]); }
 
-// ── Accept mission — go to active navigation ──────────────────
 function acceptMission() {
   const c = mission.activeCase;
   if (!c) return;
-
-  /* Update mission panel labels */
   document.getElementById('mission-dest-label').textContent = c.hospital_name || 'Hospital';
   document.getElementById('mission-hosp-name').textContent  = c.hospital_name || '--';
-  document.getElementById('mission-hosp-city').textContent  = c.hospital_city  || 'Odisha';
+  document.getElementById('mission-hosp-city').textContent  = c.hospital_city || 'Odisha';
   document.getElementById('mission-eta').textContent        = c.eta_min || '8';
-
-  /* Vitals strip on mission panel */
-  if (c.vitals) {
-    buildMissionVitalsStrip(c.vitals);
-  }
-
-  /* Build condition-specific checklist */
+  if (c.vitals) buildMissionVitalsStrip(c.vitals);
   buildChecklist(c.condition || c.symptom || 'general');
-
   showPanel('mission-panel');
   setTimeout(initRouteMap, 150);
 }
 
-function deferMission() {
-  showPanel('standby-panel');
-}
+function deferMission() { showPanel('standby-panel'); }
 
-// ── Build mission vitals strip ────────────────────────────────
 function buildMissionVitalsStrip(vitals) {
   const strip = document.getElementById('mission-vitals-strip');
   strip.style.display = 'flex';
   const fields = [
-    { key:'BP',   val: vitals.bp    || '?' },
-    { key:'SpO₂', val: vitals.spo2  ? vitals.spo2+'%'  : '?' },
-    { key:'Pulse',val: vitals.pulse ? vitals.pulse+' bpm':'?' },
-    { key:'GCS',  val: vitals.gcs   ? vitals.gcs+'/15' : '?' },
-    { key:'Temp', val: vitals.temp  ? vitals.temp+'°C' : '?' },
-    { key:'RR',   val: vitals.rr    ? vitals.rr+'/min' : '?' },
+    {key:'BP',val:vitals.bp||'?'},{key:'SpO₂',val:vitals.spo2?vitals.spo2+'%':'?'},
+    {key:'Pulse',val:vitals.pulse?vitals.pulse+' bpm':'?'},{key:'GCS',val:vitals.gcs?vitals.gcs+'/15':'?'},
+    {key:'Temp',val:vitals.temp?vitals.temp+'°C':'?'},{key:'RR',val:vitals.rr?vitals.rr+'/min':'?'},
   ];
   strip.innerHTML = fields.map(f => `
     <div class="vs-pill">
-      <div class="vs-val" style="color:var(--teal)">${f.val}</div>
+      <div class="vs-val">${f.val}</div>
       <div class="vs-key">${f.key}</div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-// ── Build pre-arrival checklist ───────────────────────────────
 function buildChecklist(condition) {
-  /* Normalise condition label to match prepLists keys */
   const key   = Object.keys(prepLists).find(k => condition.toLowerCase().includes(k)) || 'general';
   const items = prepLists[key];
-  mission.checklistItems = items.map(text => ({ text, done: false }));
-
-  const box = document.getElementById('checklist-container');
-  box.innerHTML = mission.checklistItems.map((item, idx) => `
+  const box   = document.getElementById('checklist-container');
+  box.innerHTML = items.map((text,idx) => `
     <div class="check-row" id="ci-${idx}" onclick="toggleCheck(${idx})">
       <div class="check-box" id="cb-${idx}">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="display:none" id="ck-${idx}">
-          <path d="M2 5l2.5 2.5L8 2.5" stroke="#0a0a0a" stroke-width="1.5" stroke-linecap="round"/>
+        <svg id="ck-${idx}" width="11" height="11" viewBox="0 0 11 11" fill="none" style="display:none">
+          <path d="M2 5.5l2.5 2.5L9 2.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
         </svg>
       </div>
-      <div class="check-label">${item.text}</div>
-    </div>
-  `).join('');
+      <div class="check-label">${text}</div>
+    </div>`).join('');
 }
 
-// ── Toggle checklist item ─────────────────────────────────────
 function toggleCheck(idx) {
-  mission.checklistItems[idx].done = !mission.checklistItems[idx].done;
-  const done = mission.checklistItems[idx].done;
-  document.getElementById('ci-' + idx).classList.toggle('ticked', done);
-  document.getElementById('ck-' + idx).style.display = done ? 'block' : 'none';
+  const done = !document.getElementById('ci-'+idx).classList.contains('ticked');
+  document.getElementById('ci-'+idx).classList.toggle('ticked', done);
+  document.getElementById('ck-'+idx).style.display = done ? 'block' : 'none';
 }
 
-// ── Initialise route map ──────────────────────────────────────
 function initRouteMap() {
   const c = mission.activeCase;
   if (!c) return;
-  if (routeMap) { routeMap.remove(); routeMap = null; }
-
-  const pickLat = parseFloat(c.lat)          || mission.driverLat;
-  const pickLng = parseFloat(c.lng)          || mission.driverLng;
-  const hospLat = parseFloat(c.hospital_lat) || mission.driverLat + 0.04;
-  const hospLng = parseFloat(c.hospital_lng) || mission.driverLng + 0.04;
-
-  routeMap = L.map('route-map').setView([mission.driverLat, mission.driverLng], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap',
-  }).addTo(routeMap);
-
-  /* Driver — amber */
-  driverMarker = L.circleMarker([mission.driverLat, mission.driverLng], {
-    radius: 9, color: '#d97706', fillColor: '#d97706', fillOpacity: 1,
-  }).addTo(routeMap).bindPopup('Ambulance (you)');
-
-  /* Patient pickup — red */
-  pickupMarker = L.circleMarker([pickLat, pickLng], {
-    radius: 9, color: '#e63946', fillColor: '#e63946', fillOpacity: 1,
-  }).addTo(routeMap).bindPopup('Patient location');
-
-  /* Hospital — teal */
-  hospitalMarker = L.circleMarker([hospLat, hospLng], {
-    radius: 9, color: '#0ea5a0', fillColor: '#0ea5a0', fillOpacity: 1,
-  }).addTo(routeMap).bindPopup(c.hospital_name || 'Hospital');
-
-  /* Route lines */
-  L.polyline([[mission.driverLat, mission.driverLng], [pickLat, pickLng]], {
-    color: '#d97706', dashArray: '7 5', weight: 2.5,
-  }).addTo(routeMap);
-  L.polyline([[pickLat, pickLng], [hospLat, hospLng]], {
-    color: '#3b82f6', dashArray: '7 5', weight: 2.5,
-  }).addTo(routeMap);
-
-  /* Push GPS every 5 seconds */
-  setInterval(() => {
-    channel.emit('driver_location', {
-      lat: mission.driverLat,
-      lng: mission.driverLng,
-    });
-  }, 5000);
+  if (routeMap) { routeMap.remove(); routeMap=null; }
+  const pLat = parseFloat(c.lat)||mission.driverLat, pLng = parseFloat(c.lng)||mission.driverLng;
+  const hLat = parseFloat(c.hospital_lat)||mission.driverLat+0.04, hLng = parseFloat(c.hospital_lng)||mission.driverLng+0.04;
+  routeMap = L.map('route-map').setView([mission.driverLat,mission.driverLng],13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(routeMap);
+  driverMarker   = L.circleMarker([mission.driverLat,mission.driverLng],{radius:9,color:'#b45309',fillColor:'#b45309',fillOpacity:1}).addTo(routeMap).bindPopup('Ambulance (you)');
+  pickupMarker   = L.circleMarker([pLat,pLng],{radius:9,color:'#d93025',fillColor:'#d93025',fillOpacity:1}).addTo(routeMap).bindPopup('Patient');
+  hospitalMarker = L.circleMarker([hLat,hLng],{radius:9,color:'#0d7377',fillColor:'#0d7377',fillOpacity:1}).addTo(routeMap).bindPopup(c.hospital_name||'Hospital');
+  L.polyline([[mission.driverLat,mission.driverLng],[pLat,pLng]],{color:'#b45309',dashArray:'7 5',weight:2.5}).addTo(routeMap);
+  L.polyline([[pLat,pLng],[hLat,hLng]],{color:'#0d7377',dashArray:'7 5',weight:2.5}).addTo(routeMap);
+  setInterval(() => channel.emit('driver_location',{lat:mission.driverLat,lng:mission.driverLng}), 5000);
 }
 
-// ── Mark arrived at hospital ──────────────────────────────────
 function markArrived() {
   const c = mission.activeCase;
-  channel.emit('ambulance_arrived', {
-    hospital_name: c?.hospital_name,
-    timestamp:     new Date().toISOString(),
-  });
-  alert('Arrival confirmed at ' + (c?.hospital_name || 'hospital') + '.\nHandover to ER team.');
+  channel.emit('ambulance_arrived',{hospital_name:c?.hospital_name,timestamp:new Date().toISOString()});
+  alert('Arrival confirmed at '+(c?.hospital_name||'hospital')+'.\nHandover to ER team.');
   showPanel('standby-panel');
   mission.activeCase = null;
 }
 
-// ── Demo: simulate incoming incident (dev only) ───────────────
 window._simulateIncident = function() {
   const demo = {
-    patient_name:  'Anita Mishra',
-    severity:      'critical',
-    symptom:       'cardiac',
-    condition:     'cardiac',
-    blood_group:   'B+',
-    hospital_name: 'AIIMS Bhubaneswar',
-    hospital_city: 'Bhubaneswar',
-    hospital_lat:  20.2525,
-    hospital_lng:  85.8118,
-    distance_km:   '4.2',
-    eta_min:       8,
-    ai_reason:     'Cardiac ICU with 24/7 cath lab. Highest match for MI. Critical SpO₂ — ICU ventilator available.',
-    lat:           20.2961,
-    lng:           85.8245,
-    vitals: { bp:'182/96', pulse:'118', spo2:'88', gcs:'7', temp:'37.2', rr:'28' },
-    patient: { age:'52', gender:'Female', history:'Hypertension, Type-2 diabetes' },
+    patient_name:'Anita Mishra', severity:'critical', symptom:'cardiac', condition:'cardiac',
+    blood_group:'B+', hospital_name:'AIIMS Bhubaneswar', hospital_city:'Bhubaneswar',
+    hospital_lat:20.2525, hospital_lng:85.8118, distance_km:'4.2', eta_min:8,
+    ai_reason:'Cardiac ICU with 24/7 cath lab. Highest match for MI.',
+    lat:20.2961, lng:85.8245,
+    vitals:{bp:'182/96',pulse:'118',spo2:'88',gcs:'7',temp:'37.2',rr:'28'},
+    patient:{age:'52',gender:'Female',history:'Hypertension, Type-2 diabetes'},
   };
-  channel.emit('new_incident', demo);
-  renderAlertPanel(demo);
-  mission.activeCase = demo;
-  showPanel('alert-panel');
+  mission.activeCase = demo; renderAlertPanel(demo); showPanel('alert-panel');
 };
 </script>
 </body>
