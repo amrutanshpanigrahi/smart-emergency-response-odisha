@@ -1,6 +1,6 @@
 # 🚑 Smart Emergency Response Odisha
 
-An intelligent ambulance dispatch and hospital routing system for Odisha, built with Python, Flask, MySQL, Machine Learning (K-Means + weighted scoring), and real-time WebSocket communication.
+An intelligent ambulance dispatch and hospital routing system for Odisha, built with Python, Flask, MySQL, Machine Learning (K-Means + weighted scoring), and real-time WebSocket communication
 
 ---
 
